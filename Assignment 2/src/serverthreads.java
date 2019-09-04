@@ -38,7 +38,8 @@ class TCPServer {
 class ClientHandler implements Runnable {
 
   String clientSentence;
-  String clientSentenceTemp; //To check if another \n entered by user
+  /// To check if another \n entered by user
+  String clientSentenceTemp; 
   Socket inputFromClientSocket;
   Socket outputToClientSocket;
   TCPServer server;
@@ -53,38 +54,42 @@ class ClientHandler implements Runnable {
   /// This function registers the clienthandler
   // NOTE: need to correct a few things
 
-  boolean usernameWellFormed(String username){ // true if username well formed, else false
+  boolean usernameWellFormed(String username) { 
+    // true if username well formed, else false
     return username.chars().allMatch(Character::isLetterOrDigit);
   }
-
-  String register(boolean registerSend) { //registerSend true if sendUsername = null and false if sendUsername != null and receiveUsername = null
+  /// registerSend true if sendUsername = null and false if sendUsername != null and receiveUsername = null
+  String register(boolean registerSend) { 
     String[] temp = this.clientSentence.split(" ");
 
     // Registration commands
     String commandToRegisterSend = "REGISTER TOSEND ";
     String commandToRegisterReceive = "REGISTER TORECV ";
 
-    //Acknowledgement commands
+    // Acknowledgement commands
     String registeredSend = "REGISTERED TOSEND ";
     String registeredRecv = "REGISTERED TORECV ";
 
-    //error messages
+    // error messages
     String error100Message = "ERROR 100 Malformed username \n \n";
     String error101SendUserMessage = "ERROR 101 No sendUser registered \n \n";
     String error101RecvUserMessage = "ERROR 101 No receiveUser registered \n \n";
 
-
-    if(clientSentenceTemp.length() == 0){ //To check if another \n entered by user
-      if(registerSend){ // if registerSend is true then set sendUsername else set receiveUsername
+    // To check if another \n entered by user
+    if(this.clientSentenceTemp.length() == 0){ 
+      if(registerSend){ 
+        // if registerSend is true then set sendUsername else set receiveUsername
         if(this.clientSentence.startsWith(commandToRegisterSend)){
           String usernameEntered;
           if(temp.length == 3){
             usernameEntered = temp[2];
           }
-          else{ // if more spaces, then Malformed
+          else { 
+            // if more spaces, then Malformed
             return error100Message;
           }
-          if(usernameWellFormed(usernameEntered)){ //register the user
+          if(usernameWellFormed(usernameEntered)){ 
+            // register the user
             this.sendUsername = usernameEntered;
             return registeredSend + this.sendUsername + "\n \n";
           }
@@ -93,7 +98,6 @@ class ClientHandler implements Runnable {
           }
 
         }
-
         else{
           System.out.println(this.clientSentence);
           return error101SendUserMessage;
@@ -105,7 +109,7 @@ class ClientHandler implements Runnable {
           if(temp.length == 3){
             usernameEntered = temp[2];
           }
-          else{
+          else{ 
             return error100Message;
           }
           if(usernameWellFormed(usernameEntered)){ //register the user
@@ -116,35 +120,15 @@ class ClientHandler implements Runnable {
             return error100Message;
           }
         }
-
         else{
           return error101RecvUserMessage;
         }
 
       }
     }
-    else{
+    else {
       return error100Message;
     }
-
-
-    // if(temp.length == 3)
-    // {
-    //   if(registerSend && this.clientSentence.startsWith("REGISTER TOSEND"))
-    //   {
-    //     this.sendUsername = temp[2];
-    //     return "REGISTERED TOSEND " + this.sendUsername + "\n";
-    //   } else if(!registerSend && this.clientSentence.startsWith("REGISTER TORECV"))
-    //   {
-    //     this.receiveUsername = temp[2];
-    //     return "REGISTERED TORECV " + this.receiveUsername + "\n";
-    //   } else {
-    //     return "ERROR 100 Malformed username \n";
-    //   }
-    // } else {
-    //     return "ERROR 100 Malformed username \n";
-    // }
-
   }
 
   ClientHandler (Socket inputFromClientSocket, Socket outputToClientSocket, TCPServer server, BufferedReader inFromClient, DataOutputStream outToClient) {
@@ -160,7 +144,6 @@ class ClientHandler implements Runnable {
   public void run() {
     while(true) {
       try {
-        // NOTE: better to read character by character
         // NOTE: Can a user register its senderusername again?
 
         this.clientSentence = inFromClient.readLine();
