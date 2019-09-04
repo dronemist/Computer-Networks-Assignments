@@ -47,11 +47,11 @@ class TCPClient {
         //registration done
 
 
-        MessageReceiver messageReceiver = new MessageReceiver(inputFromServerSocket, inFromServer);
+        MessageReceiver messageReceiver = new MessageReceiver(inputFromServerSocket, inFromServer, outToServer);
         Thread receiver_thread = new Thread(messageReceiver);
         receiver_thread.start();
 
-        MessageSender messageSender = new MessageSender(outputToServerSocket, outToServer, inFromUser);
+        MessageSender messageSender = new MessageSender(outputToServerSocket, outToServer, inFromUser, inFromServer);
         Thread sender_thread = new Thread(messageReceiver);
         sender_thread.start();
 
@@ -64,19 +64,52 @@ class TCPClient {
 class MessageReceiver implements Runnable{
   Socket inputFromServerSocket;
   BufferedReader inFromServer;
+  DataOutputStream outToServer;
   String serverSentence;
 
-  MessageReceiver (Socket inputFromServerSocket, BufferedReader inFromServer) {
+  MessageReceiver (Socket inputFromServerSocket, BufferedReader inFromServer, DataOutputStream outToServer) { //Receives messages, sends acknowledgements
     this.inputFromServerSocket = inputFromServerSocket;
     this.inFromServer = inFromServer;
+    this.outToServer = outToServer;
   }
 
   public void run() {
     while(true) {
       try {
-
+        String error103Message = "ERROR 103 Header incomplete\n\n";
         this.serverSentence = inFromServer.readLine();
-        System.out.println(this.serverSentence);
+        String[] temp = this.serverSentence.split(" ");
+
+        if(temp.length == 2 && temp[0].equals("FORWARD")){ //To check whther first line is okay
+          String sender = null;
+          String message = null;
+
+          sender = temp[1];
+
+          this.serverSentence = inFromServer.readLine();
+          // System.out.println(this.serverSentence);
+          temp = this.serverSentence.split(" ");
+          if(temp.length == 2 && temp[0].equals("Content-length:") && inFromServer.readLine().length() == 0){ //Checking if content-length header is okay and next line is blank
+            int contentLength = Integer.parseInt(temp[1]);
+            message = "";
+
+            for(int i=0; i<contentLength; ++i){
+
+              message = message + inFromServer.read();
+
+            }
+
+            //Now sending acknowledgement
+            String acknowledgement = "RECEIVED " + sender + "\n\n";
+            outToServer.writeBytes(acknowledgement);
+            }
+            else{
+              outToServer.writeBytes(error103Message);
+            }
+          }
+        else{
+          outToServer.writeBytes(error103Message);
+        }
 
       } catch(Exception e) {
         try {
@@ -95,13 +128,15 @@ class MessageSender implements Runnable{
   Socket outputToServerSocket;
   DataOutputStream outToServer;
   BufferedReader inFromUser;
+  BufferedReader inFromServer;
   String clientSentence;
   String messageSendProtocol;
 
 
-  MessageSender (Socket outputToServerSocket, DataOutputStream outToServer, BufferedReader inFromUser) {
+  MessageSender (Socket outputToServerSocket, DataOutputStream outToServer, BufferedReader inFromUser, BufferedReader inFromServer) {  //Sends messages, receives acknowledgements
     this.outputToServerSocket = outputToServerSocket;
     this.outToServer = outToServer;
+    this.inFromServer = inFromServer;
     this.inFromUser = inFromUser;
   }
 
@@ -121,7 +156,12 @@ class MessageSender implements Runnable{
 
           this.messageSendProtocol = "SEND " + recipient + "\n" + "Content-length: " + Integer.toString(message.length()) + "\n\n" + message;
           outToServer.writeBytes(this.messageSendProtocol);
+
+          //Server acknowledgement
+          inFromServer.readLine();
+          inFromServer.readLine();
         }
+
 
 
 
