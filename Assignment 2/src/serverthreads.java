@@ -1,10 +1,10 @@
 import java.io.*;
 import java.net.*;
-import java.util.Map;
+import java.util.HashMap;
 
 class TCPServer {
 
-  // Map<String, ClientHandler> users = new Map<String, ClientHandler>();
+  HashMap<String, ClientHandler> users = new HashMap<>();
 
   public static void main(String argv[]) throws Exception
   {
@@ -52,6 +52,15 @@ class ClientHandler implements Runnable {
 
   /// This function registers the clienthandler
   // NOTE: need to correct a few things
+  ClientHandler (Socket inputFromClientSocket, Socket outputToClientSocket, TCPServer server, BufferedReader inFromClient, DataOutputStream outToClient) {
+    this.inputFromClientSocket = inputFromClientSocket;
+    this.outputToClientSocket = outputToClientSocket;
+    this.inFromClient = inFromClient;
+    this.server = server;
+    this.outToClient = outToClient;
+    this.sendUsername = null;
+    this.receiveUsername = null;
+  }
 
   boolean usernameWellFormed(String username){ // true if username well formed, else false
     return username.chars().allMatch(Character::isLetterOrDigit);
@@ -95,7 +104,7 @@ class ClientHandler implements Runnable {
         }
 
         else{
-          System.out.println(this.clientSentence);
+          // System.out.println(this.clientSentence);
           return error101SendUserMessage;
         }
       }
@@ -127,34 +136,13 @@ class ClientHandler implements Runnable {
       return error100Message;
     }
 
-
-    // if(temp.length == 3)
-    // {
-    //   if(registerSend && this.clientSentence.startsWith("REGISTER TOSEND"))
-    //   {
-    //     this.sendUsername = temp[2];
-    //     return "REGISTERED TOSEND " + this.sendUsername + "\n";
-    //   } else if(!registerSend && this.clientSentence.startsWith("REGISTER TORECV"))
-    //   {
-    //     this.receiveUsername = temp[2];
-    //     return "REGISTERED TORECV " + this.receiveUsername + "\n";
-    //   } else {
-    //     return "ERROR 100 Malformed username \n";
-    //   }
-    // } else {
-    //     return "ERROR 100 Malformed username \n";
-    // }
-
   }
 
-  ClientHandler (Socket inputFromClientSocket, Socket outputToClientSocket, TCPServer server, BufferedReader inFromClient, DataOutputStream outToClient) {
-    this.inputFromClientSocket = inputFromClientSocket;
-    this.outputToClientSocket = outputToClientSocket;
-    this.inFromClient = inFromClient;
-    this.server = server;
-    this.outToClient = outToClient;
-    this.sendUsername = null;
-    this.receiveUsername = null;
+
+  String processMessageSendFromClient(){
+    String
+
+
   }
 
   public void run() {
@@ -163,28 +151,36 @@ class ClientHandler implements Runnable {
         // NOTE: better to read character by character
         // NOTE: Can a user register its senderusername again?
 
-        this.clientSentence = inFromClient.readLine();
-        System.out.println(this.clientSentence);
-        String outputToClient = "\n";
-        this.clientSentenceTemp = ""; // This should be a blank string, to check if \n entered by user
+
+        String outputToClient = null;
+
         if(this.sendUsername == null)
         {
+          // System.out.println(this.clientSentenceTemp.length());
+          this.clientSentence = inFromClient.readLine();
+          System.out.println(this.clientSentence);
+          this.clientSentenceTemp = inFromClient.readLine(); // This should be a blank string, to check if \n coming in request
           outputToClient = register(true);
 
         } else if(this.receiveUsername == null)
         {
           // this.clientSentenceTemp = inFromClient.readLine(); // This should be a blank string, to check if \n entered by user
+          this.clientSentence = inFromClient.readLine();
+          System.out.println(this.clientSentence);
+          this.clientSentenceTemp = inFromClient.readLine(); // This should be a blank string, to check if \n coming in request
           outputToClient = register(false);
         }
+        else{ //User registered, send and receive messages now
 
-        // if(clientSentence.equals("over"))
-        // {
-        //   this.inputFromClientSocket.close();
-        //   this.outputToClientSocket.close();
-        //   break;
-        // }
-        // capitalizedSentence = clientSentence.toUpperCase() + '\n';
-        outToClient.writeBytes(outputToClient);
+
+
+        }
+
+
+
+        if(outputToClient != null){
+          outToClient.writeBytes(outputToClient);
+        }
 
       } catch(Exception e) {
         try {
