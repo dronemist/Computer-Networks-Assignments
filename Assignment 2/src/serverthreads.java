@@ -78,9 +78,9 @@ class ClientHandler implements Runnable {
     String registeredRecv = "REGISTERED TORECV ";
 
     //error messages
-    String error100Message = "ERROR 100 Malformed username \n \n";
-    String error101SendUserMessage = "ERROR 101 No sendUser registered \n \n";
-    String error101RecvUserMessage = "ERROR 101 No receiveUser registered \n \n";
+    String error100Message = "ERROR 100 Malformed username\n\n";
+    String error101SendUserMessage = "ERROR 101 No User registered\n\n";
+    String error101RecvUserMessage = "ERROR 101 No User registered\n\n";
 
 
     if(clientSentenceTemp.length() == 0){ //To check if another \n entered by user
@@ -95,7 +95,7 @@ class ClientHandler implements Runnable {
           }
           if(usernameWellFormed(usernameEntered)){ //register the user
             this.sendUsername = usernameEntered;
-            return registeredSend + this.sendUsername + "\n \n";
+            return registeredSend + this.sendUsername + "\n\n";
           }
           else{
             return error100Message;
@@ -119,7 +119,7 @@ class ClientHandler implements Runnable {
           }
           if(usernameWellFormed(usernameEntered)){ //register the user
             this.receiveUsername = usernameEntered;
-            return registeredRecv + this.receiveUsername + "\n \n";
+            return registeredRecv + this.receiveUsername + "\n\n";
           }
           else{
             return error100Message;
@@ -140,7 +140,49 @@ class ClientHandler implements Runnable {
 
 
   String processMessageSendFromClient(){
-    String
+    String error102Message = "ERROR 102 UNABLE TO SEND\n\n";
+    String error103Message = "ERROR 103 Header incomplete\n\n";
+
+
+    try{
+      this.clientSentence = inFromClient.readLine();
+      String[] temp = this.clientSentence.split(" ");
+
+      if(temp.length == 2 && temp[0].equals("SEND")){ //To check whther first line is okay
+        String recipient = null;
+        String message = null;
+
+        recipient = temp[1];
+
+        this.clientSentence = inFromClient.readLine();
+        temp = this.clientSentence.split(" ");
+        if(temp.length == 2 && temp[0].equals("Content-length:") && inFromClient.readLine().length() == 0){ //Checking if content-length header is okay and next line is blank
+          int contentLength = Integer.parseInt(temp[1]);
+          message = "";
+
+          for(int i=0; i<contentLength; ++i){
+
+            message = message + inFromClient.read();
+
+          }
+
+
+          return "SENT " + recipient + "\n\n";
+
+        }
+        else{
+          return error103Message;
+        }
+
+      }
+      else{ //NOTE: We should also send some message to client so that connection is closed
+
+        return error103Message;
+      }
+    }
+    catch(Exception e){ //What error to throw here
+      return error103Message;
+    }
 
 
   }
