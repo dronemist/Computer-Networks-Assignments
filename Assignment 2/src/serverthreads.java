@@ -9,22 +9,32 @@ class TCPServer {
   public static void main(String argv[]) throws Exception
   {
     TCPServer server = new TCPServer();
-    ServerSocket welcomeSocket = new ServerSocket(6788);
-    welcomeSocket.setSoTimeout(20000);
+    ServerSocket welcomeSocket = new ServerSocket(6791);
+    welcomeSocket.setSoTimeout(40000);
     try {
       while(true)
       {
-        Socket inputFromClientSocket = welcomeSocket.accept();
-        System.out.println(inputFromClientSocket.getRemoteSocketAddress());
-        Socket outputToClientSocket = welcomeSocket.accept();
-        BufferedReader inFromClient =
-          new BufferedReader(new
-          InputStreamReader(inputFromClientSocket.getInputStream()));
+        /// the send socket of the client is attached to this socket
+        Socket sendClientSocket = welcomeSocket.accept();
+        /// the recieve socket of the client is attached to this socket
+        Socket recieveClientSocket = welcomeSocket.accept();
 
-        DataOutputStream outToClient =
-          new DataOutputStream(outputToClientSocket.getOutputStream());
+        BufferedReader sendInFromClient =
+        new BufferedReader(new
+        InputStreamReader(sendClientSocket.getInputStream()));
 
-        ClientHandler clientHandler = new ClientHandler(inputFromClientSocket, outputToClientSocket, server, inFromClient, outToClient);
+        DataOutputStream sendOutToClient =
+        new DataOutputStream(sendClientSocket.getOutputStream());
+        
+        BufferedReader recieveInFromClient =
+        new BufferedReader(new
+        InputStreamReader(recieveClientSocket.getInputStream()));
+
+        DataOutputStream recieveOutToClient =
+        new DataOutputStream(recieveClientSocket.getOutputStream());  
+
+        ClientHandler clientHandler = new ClientHandler(sendClientSocket, recieveClientSocket, 
+        server, sendInFromClient, sendOutToClient, recieveInFromClient, recieveOutToClient);
         Thread thread = new Thread(clientHandler);
         thread.start();
       }
@@ -41,25 +51,31 @@ class ClientHandler implements Runnable {
   String clientSentence;
   /// To check if another \n entered by user
   String clientSentenceTemp; 
-  Socket inputFromClientSocket;
-  Socket outputToClientSocket;
+  Socket sendClientSocket;
+  Socket recieveClientSocket;
   TCPServer server;
   /// sending username of the client this client handler is assigned to
   String sendUsername;
 
   /// recieving username of the client this client handler is assigned to
   String receiveUsername;
-  BufferedReader inFromClient;
-  DataOutputStream outToClient;
+  BufferedReader sendInFromClient;
+  DataOutputStream sendOutToClient;
+  BufferedReader recieveInFromClient;
+  DataOutputStream recieveOutToClient;
 
   /// This function registers the clienthandler
   // NOTE: need to correct a few things
-  ClientHandler (Socket inputFromClientSocket, Socket outputToClientSocket, TCPServer server, BufferedReader inFromClient, DataOutputStream outToClient) {
-    this.inputFromClientSocket = inputFromClientSocket;
-    this.outputToClientSocket = outputToClientSocket;
-    this.inFromClient = inFromClient;
+  ClientHandler (Socket inputFromClientSocket, Socket outputToClientSocket, TCPServer server, 
+  BufferedReader sendInFromClient, DataOutputStream sendOutToClient,
+  BufferedReader recieveInFromClient, DataOutputStream recieveOutToClient) {
+    this.sendClientSocket = inputFromClientSocket;
+    this.recieveClientSocket = outputToClientSocket;
+    this.sendInFromClient = sendInFromClient;
+    this.sendOutToClient = sendOutToClient;
+    this.recieveInFromClient = recieveInFromClient;
+    this.recieveOutToClient = recieveOutToClient;
     this.server = server;
-    this.outToClient = outToClient;
     this.sendUsername = null;
     this.receiveUsername = null;
   }
@@ -91,29 +107,30 @@ class ClientHandler implements Runnable {
         // if registerSend is true then set sendUsername else set receiveUsername
         if(this.clientSentence.startsWith(commandToRegisterSend)){
           String usernameEntered;
-          if(temp.length == 3){
+          if(temp.length == 3) {
             usernameEntered = temp[2];
           }
           else { 
             // if more spaces, then Malformed
             return error100Message;
           }
-          if(usernameWellFormed(usernameEntered)){ 
+          if(usernameWellFormed(usernameEntered)) { 
             // register the user
             this.sendUsername = usernameEntered;
             return registeredSend + this.sendUsername + "\n\n";
           }
-          else{
+          else {
             return error100Message;
           }
 
         }
-        else{
+        else {
           // System.out.println(this.clientSentence);
           return error101SendUserMessage;
         }
       }
-      else{ // if registerSend == false, then registerReceive
+      else {  
+        // if registerSend == false, then registerReceive
         if(this.clientSentence.startsWith(commandToRegisterReceive)){
           String usernameEntered;
           if(temp.length == 3){
@@ -145,26 +162,27 @@ class ClientHandler implements Runnable {
 
   }
 
-  String messageForwardToClient(String recipient, String message){
+  String messageForwardToClient(String recipient, String message) {
     String error102Message = "ERROR 102 UNABLE TO SEND\n\n";
 
     String messageForwardProtocol = "";
 
     messageForwardProtocol = "FORWARD " + this.sendUsername + "\n" + "Content-length: " + Integer.toString(message.length()) + "\n\n" + message;
 
-    ClientHandler recipientClientHandler = server.users.get(recipient);
-    if(recipientClientHandler == null){
+    ClientHandler recipientClientHandler = this.server.users.get(recipient);
+    if(recipientClientHandler == null) {
 
       return error102Message;
 
     }
-    else{
-      try{
-        recipientClientHandler.outToClient.writeBytes(messageForwardProtocol);  //NOTE: Problem can occur in thread synchronization
+    else {
+      try {
+        recipientClientHandler.recieveOutToClient.writeBytes(messageForwardProtocol);
+        // NOTE: Problem can occur in thread synchronization
+        String acknowledgement = recipientClientHandler.recieveInFromClient.readLine();
 
-        String acknowledgement = recipientClientHandler.inFromClient.readLine();
-
-        if(acknowledgement.equals("RECEIVED " + recipient) && recipientClientHandler.inFromClient.readLine().equals("")){ //Check if proper header format
+        if(acknowledgement.equals("RECEIVED " + recipient) && recipientClientHandler.recieveInFromClient.readLine().equals("")){ 
+          //Check if proper header format
 
           return acknowledgement;
 
@@ -172,72 +190,59 @@ class ClientHandler implements Runnable {
         else{
           return error102Message;
         }
-
-
-
       }
       catch(Exception e){
         return error102Message;
       }
 
     }
-
     // this.outputToClientSocket.writeBytes(messageForwardProtocol);
-
-
-
   }
 
 
   String processMessageSendFromClient(){
 
     String error103Message = "ERROR 103 Header incomplete\n\n";
-
-
     try {
-      this.clientSentence = inFromClient.readLine();
+      this.clientSentence = sendInFromClient.readLine();
       String[] temp = this.clientSentence.split(" ");
-
-      if(temp.length == 2 && temp[0].equals("SEND")){ 
-        // To check whther first line is okay
+      if(temp.length == 2 && temp[0].equals("SEND")) { 
+        // To check whether first line is okay
         String recipient = null;
         String message = null;
 
         recipient = temp[1];
 
-        this.clientSentence = inFromClient.readLine();
+        this.clientSentence = sendInFromClient.readLine();
         temp = this.clientSentence.split(" ");
         // Checking if content-length header is okay and next line is blank
-        if(temp.length == 2 && temp[0].equals("Content-length:") && inFromClient.readLine().length() == 0){ 
+        if(temp.length == 2 && temp[0].equals("Content-length:") && sendInFromClient.readLine().length() == 0) { 
           int contentLength = Integer.parseInt(temp[1]);
           message = "";
-
           for(int i=0; i<contentLength; ++i){
 
-            message = message + (char)inFromClient.read();
+            message = message + (char)sendInFromClient.read();
 
           }
-          System.out.println(message);
-          //Now forwarding the message
+          // System.out.println(message);
+          // Now forwarding the message
           String forwardResponse = messageForwardToClient(recipient, message);
-          if(forwardResponse.startsWith("RECEIVED ")){
+          if(forwardResponse.startsWith("RECEIVED ")) {
               return "SENT " + recipient + "\n\n";
           }
-          else{
-            return forwardResponse; //Error sent by forwardResponse
+          else {
+            return forwardResponse; // Error sent by forwardResponse
           }
 
-
-
         }
-        else{
+        else {
           return error103Message;
         }
 
       }
-      else{ 
+      else { 
         // NOTE: We should also send some message to client so that connection is closed
-        System.out.println("here1");
+        // System.out.println("here1");
         return error103Message;
       }
     }
@@ -253,41 +258,33 @@ class ClientHandler implements Runnable {
     while(true) {
       try {
         // NOTE: Can a user register its senderusername again?
-
-
         String outputToClient = null;
 
-        if(this.sendUsername == null)
-        {
+        if(this.sendUsername == null) {
           // System.out.println(this.clientSentenceTemp.length());
-          this.clientSentence = inFromClient.readLine();
+          this.clientSentence = sendInFromClient.readLine();
           System.out.println(this.clientSentence);
-          this.clientSentenceTemp = inFromClient.readLine(); // This should be a blank string, to check if \n coming in request
+          this.clientSentenceTemp = sendInFromClient.readLine(); // This should be a blank string, to check if \n coming in request
           outputToClient = register(true);
 
-        } else if(this.receiveUsername == null)
-        {
+        } else if(this.receiveUsername == null) {
           // this.clientSentenceTemp = inFromClient.readLine(); // This should be a blank string, to check if \n entered by user
-          this.clientSentence = inFromClient.readLine();
+          this.clientSentence = sendInFromClient.readLine();
           System.out.println(this.clientSentence);
-          this.clientSentenceTemp = inFromClient.readLine(); // This should be a blank string, to check if \n coming in request
+          this.clientSentenceTemp = sendInFromClient.readLine(); // This should be a blank string, to check if \n coming in request
           outputToClient = register(false);
         }
-        else{ //User registered, send and receive messages now
+        else { 
+          // User registered, send and receive messages now
           outputToClient = processMessageSendFromClient();
-          break;
         }
-
-
-        System.out.println(outputToClient);
-        if(outputToClient != null){
-          outToClient.writeBytes(outputToClient);
+        if(outputToClient != null) {
+          sendOutToClient.writeBytes(outputToClient);
         }
-
       } catch(Exception e) {
         try {
-          this.inputFromClientSocket.close();
-          this.outputToClientSocket.close();
+          this.sendClientSocket.close();
+          this.recieveClientSocket.close();
         } catch(Exception ee) { }
           break;
       }
