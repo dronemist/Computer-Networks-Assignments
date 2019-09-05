@@ -1,10 +1,10 @@
 import java.io.*;
 import java.net.*;
-import java.util.HashMap;
+import java.util.*;
 
 class TCPServer {
 
-  HashMap<String, ClientHandler> users = new HashMap<>();
+  Hashtable<String, ClientHandler> users = new Hashtable<>();
 
   public static void main(String argv[]) throws Exception
   {
@@ -29,6 +29,7 @@ class TCPServer {
         thread.start();
       }
     } catch(Exception e) {
+      System.out.println("Closing");
       welcomeSocket.close();
     }
   }
@@ -123,6 +124,9 @@ class ClientHandler implements Runnable {
           }
           if(usernameWellFormed(usernameEntered)){ //register the user
             this.receiveUsername = usernameEntered;
+
+            server.users.put(usernameEntered, this); // User registered on the server
+
             return registeredRecv + this.receiveUsername + "\n\n";
           }
           else{
@@ -141,9 +145,52 @@ class ClientHandler implements Runnable {
 
   }
 
+  String messageForwardToClient(String recipient, String message){
+    String error102Message = "ERROR 102 UNABLE TO SEND\n\n";
+
+    String messageForwardProtocol = "";
+
+    messageForwardProtocol = "FORWARD " + this.sendUsername + "\n" + "Content-length: " + Integer.toString(message.length()) + "\n\n" + message;
+
+    ClientHandler recipientClientHandler = server.users.get(recipient);
+    if(recipientClientHandler == null){
+
+      return error102Message;
+
+    }
+    else{
+      try{
+        recipientClientHandler.outToClient.writeBytes(messageForwardProtocol);  //NOTE: Problem can occur in thread synchronization
+
+        String acknowledgement = recipientClientHandler.inFromClient.readLine();
+
+        if(acknowledgement.equals("RECEIVED " + recipient) && recipientClientHandler.inFromClient.readLine().equals("")){ //Check if proper header format
+
+          return acknowledgement;
+
+        }
+        else{
+          return error102Message;
+        }
+
+
+
+      }
+      catch(Exception e){
+        return error102Message;
+      }
+
+    }
+
+    // this.outputToClientSocket.writeBytes(messageForwardProtocol);
+
+
+
+  }
+
 
   String processMessageSendFromClient(){
-    String error102Message = "ERROR 102 UNABLE TO SEND\n\n";
+
     String error103Message = "ERROR 103 Header incomplete\n\n";
 
 
@@ -167,10 +214,20 @@ class ClientHandler implements Runnable {
 
           for(int i=0; i<contentLength; ++i){
 
-            message = message + inFromClient.read();
+            message = message + (char)inFromClient.read();
 
           }
-          return "SENT " + recipient + "\n\n";
+          System.out.println(message);
+          //Now forwarding the message
+          String forwardResponse = messageForwardToClient(recipient, message);
+          if(forwardResponse.startsWith("RECEIVED ")){
+              return "SENT " + recipient + "\n\n";
+          }
+          else{
+            return forwardResponse; //Error sent by forwardResponse
+          }
+
+
 
         }
         else{
@@ -180,6 +237,7 @@ class ClientHandler implements Runnable {
       }
       else{ 
         // NOTE: We should also send some message to client so that connection is closed
+        System.out.println("here1");
         return error103Message;
       }
     }
@@ -215,15 +273,13 @@ class ClientHandler implements Runnable {
           this.clientSentenceTemp = inFromClient.readLine(); // This should be a blank string, to check if \n coming in request
           outputToClient = register(false);
         }
-        else{ 
-          // User registered, send and receive messages now
-
-
-
+        else{ //User registered, send and receive messages now
+          outputToClient = processMessageSendFromClient();
+          break;
         }
 
 
-
+        System.out.println(outputToClient);
         if(outputToClient != null){
           outToClient.writeBytes(outputToClient);
         }
