@@ -49,10 +49,12 @@ class TCPClient {
 
         MessageReceiver messageReceiver = new MessageReceiver(inputFromServerSocket, inFromServer, outToServer);
         Thread receiver_thread = new Thread(messageReceiver);
+        System.out.println("Receiver started");
         receiver_thread.start();
 
         MessageSender messageSender = new MessageSender(outputToServerSocket, outToServer, inFromUser, inFromServer);
-        Thread sender_thread = new Thread(messageReceiver);
+        Thread sender_thread = new Thread(messageSender);
+        System.out.println("Sender started");
         sender_thread.start();
 
        // clientSocket.close();
@@ -95,10 +97,10 @@ class MessageReceiver implements Runnable{
 
             for(int i=0; i<contentLength; ++i){
 
-              message = message + inFromServer.read();
+              message = message + (char)inFromServer.read();
 
             }
-
+            System.out.println(sender + ": " + message);
             //Now sending acknowledgement
             String acknowledgement = "RECEIVED " + sender + "\n\n";
             outToServer.writeBytes(acknowledgement);
@@ -141,9 +143,12 @@ class MessageSender implements Runnable{
   }
 
   public void run() {
+    // System.out.println("yo");
     while(true) {
       try {
+        // System.out.println("yo");
         this.clientSentence = inFromUser.readLine();
+        System.out.println(clientSentence);
         String[] temp = this.clientSentence.split(" ");
         String message = "";
         String recipient;
@@ -169,6 +174,7 @@ class MessageSender implements Runnable{
 
 
       } catch(Exception e) {
+        // System.out.println("hi");
         try {
           this.outputToServerSocket.close();
         } catch(Exception ee) { }

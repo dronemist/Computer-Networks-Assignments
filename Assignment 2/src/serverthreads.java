@@ -29,6 +29,7 @@ class TCPServer {
         thread.start();
       }
     } catch(Exception e) {
+      System.out.println("Closing");
       welcomeSocket.close();
     }
   }
@@ -208,10 +209,10 @@ class ClientHandler implements Runnable {
 
           for(int i=0; i<contentLength; ++i){
 
-            message = message + inFromClient.read();
+            message = message + (char)inFromClient.read();
 
           }
-
+          System.out.println(message);
           //Now forwarding the message
           String forwardResponse = messageForwardToClient(recipient, message);
           if(forwardResponse.startsWith("RECEIVED ")){
@@ -230,7 +231,7 @@ class ClientHandler implements Runnable {
 
       }
       else{ //NOTE: We should also send some message to client so that connection is closed
-
+        System.out.println("here1");
         return error103Message;
       }
     }
@@ -267,13 +268,12 @@ class ClientHandler implements Runnable {
           outputToClient = register(false);
         }
         else{ //User registered, send and receive messages now
-
-
-
+          outputToClient = processMessageSendFromClient();
+          break;
         }
 
 
-
+        System.out.println(outputToClient);
         if(outputToClient != null){
           outToClient.writeBytes(outputToClient);
         }
