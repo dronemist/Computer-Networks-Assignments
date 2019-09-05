@@ -180,14 +180,12 @@ class ClientHandler implements Runnable {
         recipientClientHandler.recieveOutToClient.writeBytes(messageForwardProtocol);
         // NOTE: Problem can occur in thread synchronization
         String acknowledgement = recipientClientHandler.recieveInFromClient.readLine();
-
-        if(acknowledgement.equals("RECEIVED " + recipient) && recipientClientHandler.recieveInFromClient.readLine().equals("")){ 
-          //Check if proper header format
-
+        System.out.println(acknowledgement);
+        if(acknowledgement.equals("RECEIVED " + this.sendUsername) && recipientClientHandler.recieveInFromClient.readLine().equals("")){ 
+          // Check if proper header format
           return acknowledgement;
-
         }
-        else{
+        else {
           return error102Message;
         }
       }
@@ -224,10 +222,10 @@ class ClientHandler implements Runnable {
             message = message + (char)sendInFromClient.read();
 
           }
-          // System.out.println(message);
           // Now forwarding the message
           String forwardResponse = messageForwardToClient(recipient, message);
-          if(forwardResponse.startsWith("RECEIVED ")) {
+          System.out.println(forwardResponse);
+          if(forwardResponse.startsWith("RECEIVED")) {
               return "SENT " + recipient + "\n\n";
           }
           else {

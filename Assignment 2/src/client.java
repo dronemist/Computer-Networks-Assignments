@@ -107,7 +107,7 @@ class MessageReceiver implements Runnable {
               message = message + (char)recieveInFromServer.read();
 
             }
-            System.out.println(sender + ": " + message);
+            System.out.println("#" + sender + ": " + message);
             // Now sending acknowledgement
             String acknowledgement = "RECEIVED " + sender + "\n\n";
             this.recieveOutToServer.writeBytes(acknowledgement);
@@ -159,13 +159,14 @@ class MessageSender implements Runnable {
         String recipient;
         if(temp.length > 1 && temp[0].startsWith("@")) {
           recipient = temp[0].substring(1, temp[0].length() - 1);
-          for(int i=1; i<temp.length; ++i) {
-            message = message + temp[i];
-          }
+          message = this.clientSentence.substring(1 + recipient.length() + 2);
+          // for(int i=1; i<temp.length; ++i) {
+          //   message = message + temp[i];
+          // }
           this.messageSendProtocol = "SEND " + recipient + "\n" + "Content-length: " + Integer.toString(message.length()) + "\n\n" + message;
           outToServer.writeBytes(this.messageSendProtocol);
           // Server acknowledgement
-          System.out.print(inFromServer.readLine());
+          System.out.println(inFromServer.readLine());
           System.out.print(inFromServer.readLine());
         }
       } catch(Exception e) {
