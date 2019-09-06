@@ -150,7 +150,6 @@ class ClientHandler implements Runnable {
           else {
             return error100Message;
           }
-
         }
         else {
           // System.out.println(this.clientSentence);
@@ -181,21 +180,28 @@ class ClientHandler implements Runnable {
         else{
           return error101RecvUserMessage;
         }
-
       }
     }
     else {
       return error100Message;
     }
-
   }
+  // MODE: argument of hashSignature
 
-  String messageForwardToClient(String recipient, String message) {
+  String messageForwardToClient(String recipient, String message, String hashSignature) {
     String error102Message = "ERROR 102 UNABLE TO SEND\n\n";
+    String error106Message = "ERROR 106 No public key found\n\n";
 
     String messageForwardProtocol = "";
+    // MODE: UNCOMMENT
+    // messageForwardProtocol = "FORWARD " + this.sendUsername + "\n" + "Content-length: " + Integer.toString(message.length()) 
+    // + "\n\n" + message;
 
-    messageForwardProtocol = "FORWARD " + this.sendUsername + "\n" + "Content-length: " + Integer.toString(message.length()) + "\n\n" + message;
+    // DOUBT: I am not sure if public key needs to be sent in the same message
+    // because we are checking for message integrity
+
+    messageForwardProtocol = "FORWARD " + this.sendUsername + "\n" + "Content-length: " + Integer.toString(message.length()) 
+    + "\n" + "SIGNATURE: " + hashSignature + "\n\n" + message;
 
     ClientHandler recipientClientHandler = this.server.users.get(recipient);
     if(recipientClientHandler == null) {
@@ -206,7 +212,25 @@ class ClientHandler implements Runnable {
     else {
       try {
         recipientClientHandler.recieveOutToClient.writeBytes(messageForwardProtocol);
+        // MODE:
+        String inputFromReceiver[] = recipientClientHandler.recieveInFromClient.readLine().split(" ");
+        // DOUBT: should we check directly send or wait for reciever to request public key
+        String publicKey;
+        if(inputFromReceiver.length == 2 &&
+        inputFromReceiver[0].startsWith("FETCHKEY") &&
+        recipientClientHandler.recieveInFromClient.readLine().equals(""))
+        {
+          publicKey = server.publicKeys.get(inputFromReceiver[1]);
+          String publicKeyProtocol = "PUBLICKEY " + publicKey + "\n\n";
+          if(publicKey != null) { 
+            recipientClientHandler.recieveOutToClient.writeBytes(publicKeyProtocol);
+          } else {
+            recipientClientHandler.recieveOutToClient.writeBytes(error106Message);
+            return error102Message;
+          }
+        }
         // NOTE: Problem can occur in thread synchronization
+        // DOUBT: should we send a different error if message not consistent? 
         String acknowledgement = recipientClientHandler.recieveInFromClient.readLine();
         System.out.println(acknowledgement);
         if(acknowledgement.equals("RECEIVED " + this.sendUsername) && recipientClientHandler.recieveInFromClient.readLine().equals("")){ 
@@ -220,7 +244,6 @@ class ClientHandler implements Runnable {
       catch(Exception e){
         return error102Message;
       }
-
     }
     // this.outputToClientSocket.writeBytes(messageForwardProtocol);
   }
@@ -244,25 +267,34 @@ class ClientHandler implements Runnable {
         }
       }
       if(temp.length == 2 && temp[0].equals("SEND")) { 
+
         // To check whether first line is okay
         String recipient = null;
         String message = null;
-
+        String hashSignature = null;
         recipient = temp[1];
 
         this.clientSentence = sendInFromClient.readLine();
         temp = this.clientSentence.split(" ");
+        String hashSignatureArray[] = sendInFromClient.readLine().split(" ");
+
         // Checking if content-length header is okay and next line is blank
-        if(temp.length == 2 && temp[0].equals("Content-length:") && sendInFromClient.readLine().length() == 0) { 
+        if(temp.length == 2 && temp[0].equals("Content-length:") 
+        // MODE: See this if for mode
+        && hashSignatureArray.length == 2 && hashSignatureArray[0].equals("SIGNATURE:") 
+        && sendInFromClient.readLine().length() == 0) { 
           int contentLength = Integer.parseInt(temp[1]);
           message = "";
           for(int i = 0; i < contentLength; ++i){
             message = message + (char)sendInFromClient.read();
           }
+          hashSignature = hashSignatureArray[1];
+
           // Printing message
           System.out.println("Message sent: " + message);
+
           // Now forwarding the message
-          String forwardResponse = messageForwardToClient(recipient, message);
+          String forwardResponse = messageForwardToClient(recipient, message, hashSignature);
           if(forwardResponse.startsWith("RECEIVED")) {
               return "SENT " + recipient + "\n\n";
           }

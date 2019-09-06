@@ -15,10 +15,36 @@ public class CryptographyExample {
 
     private static final String ALGORITHM = "RSA";
 
+    public static byte[] decryptByPublicKey(byte[] publicKey, byte[] inputData)
+            throws Exception {
+        PublicKey key = KeyFactory.getInstance(ALGORITHM)
+        .generatePublic(new X509EncodedKeySpec(publicKey));
+
+        Cipher cipher = Cipher.getInstance(ALGORITHM);
+        cipher.init(Cipher.DECRYPT_MODE, key);
+
+        byte[] decryptedBytes = cipher.doFinal(inputData);
+
+        return decryptedBytes;
+    }
+
     public static byte[] encrypt(byte[] publicKey, byte[] inputData)
             throws Exception {
         PublicKey key = KeyFactory.getInstance(ALGORITHM)
                 .generatePublic(new X509EncodedKeySpec(publicKey));
+
+        Cipher cipher = Cipher.getInstance(ALGORITHM);
+        cipher.init(Cipher.ENCRYPT_MODE, key);
+
+        byte[] encryptedBytes = cipher.doFinal(inputData);
+
+        return encryptedBytes;
+    }
+
+    public static byte[] encryptByPrivateKey(byte[] privateKey, byte[] inputData)
+            throws Exception {
+        PrivateKey key = KeyFactory.getInstance(ALGORITHM)
+        .generatePrivate(new PKCS8EncodedKeySpec(privateKey));
 
         Cipher cipher = Cipher.getInstance(ALGORITHM);
         cipher.init(Cipher.ENCRYPT_MODE, key);
@@ -62,10 +88,10 @@ public class CryptographyExample {
     //     byte[] publicKey = generateKeyPair.getPublic().getEncoded();
     //     byte[] privateKey = generateKeyPair.getPrivate().getEncoded();
 
-    //     byte[] encryptedData = encrypt(publicKey,
+    //     byte[] encryptedData = encryptByPrivateKey(privateKey,
     //             "hi there".getBytes());
 
-    //     byte[] decryptedData = decrypt(privateKey, encryptedData);
+    //     byte[] decryptedData = decryptByPublicKey(publicKey, encryptedData);
 
     //     System.out.println(new String(encryptedData));
     //     System.out.println(new String(decryptedData));
