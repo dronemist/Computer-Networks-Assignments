@@ -5,7 +5,7 @@ import java.util.*;
 class TCPServer {
 
   Hashtable<String, ClientHandler> users = new Hashtable<>();
-
+  Hashtable<String, String> publicKeys = new Hashtable<>();
   public static void main(String argv[]) throws Exception
   {
     TCPServer server = new TCPServer();
@@ -57,6 +57,8 @@ class ClientHandler implements Runnable {
   /// sending username of the client this client handler is assigned to
   String sendUsername;
 
+  String publicKey;
+
   /// recieving username of the client this client handler is assigned to
   String receiveUsername;
   BufferedReader sendInFromClient;
@@ -78,12 +80,38 @@ class ClientHandler implements Runnable {
     this.server = server;
     this.sendUsername = null;
     this.receiveUsername = null;
+    this.publicKey = null;
   }
 
   boolean usernameWellFormed(String username) { 
     // true if username well formed, else false
     return username.chars().allMatch(Character::isLetterOrDigit);
   }
+  /// registering the public key
+  String registerPublicKey() {
+
+    String[] temp = this.clientSentence.split(" ");
+
+    // Registration commands
+    String commandToRegisterKey = "REGISTER PUBLICKEY ";
+
+    // Acknowledgement commands
+    String registeredSend = "REGISTERED PUBLICKEY\n\n";
+
+    // Error commands
+    String error104MessageString = "ERROR 104 CANNOT REGISTER PUBLIC KEY\n\n";
+
+    if(this.clientSentenceTemp.length() == 0 
+    && this.clientSentence.startsWith(commandToRegisterKey) 
+    && this.receiveUsername != null) {
+        this.publicKey = temp[2];
+        server.publicKeys.put(this.receiveUsername, temp[2]);
+        return registeredSend;
+    } else {
+      return error104MessageString;
+    }
+  }
+
   /// registerSend true if sendUsername = null and false if sendUsername != null and receiveUsername = null
   String register(boolean registerSend) { 
     String[] temp = this.clientSentence.split(" ");
@@ -105,7 +133,7 @@ class ClientHandler implements Runnable {
     if(this.clientSentenceTemp.length() == 0){ 
       if(registerSend){ 
         // if registerSend is true then set sendUsername else set receiveUsername
-        if(this.clientSentence.startsWith(commandToRegisterSend)){
+        if(this.clientSentence.startsWith(commandToRegisterSend)) {
           String usernameEntered;
           if(temp.length == 3) {
             usernameEntered = temp[2];
@@ -136,7 +164,7 @@ class ClientHandler implements Runnable {
           if(temp.length == 3){
             usernameEntered = temp[2];
           }
-          else{ 
+          else { 
             return error100Message;
           }
           if(usernameWellFormed(usernameEntered)){ //register the user
@@ -201,9 +229,20 @@ class ClientHandler implements Runnable {
   String processMessageSendFromClient(){
 
     String error103Message = "ERROR 103 Header incomplete\n\n";
+    String error106Message = "ERROR 106 No public Key found\n\n";
     try {
       this.clientSentence = sendInFromClient.readLine();
+      
       String[] temp = this.clientSentence.split(" ");
+      if(temp.length == 2 && temp[0].equals("FETCHKEY")) {
+        String recipient = temp[1];
+        String publicKey = server.publicKeys.get(recipient);
+        if(publicKey != null && sendInFromClient.readLine().length() == 0) {
+          return "PUBLICKEY " + publicKey + "\n\n";
+        } else {
+          return error106Message;
+        }
+      }
       if(temp.length == 2 && temp[0].equals("SEND")) { 
         // To check whether first line is okay
         String recipient = null;
@@ -217,14 +256,13 @@ class ClientHandler implements Runnable {
         if(temp.length == 2 && temp[0].equals("Content-length:") && sendInFromClient.readLine().length() == 0) { 
           int contentLength = Integer.parseInt(temp[1]);
           message = "";
-          for(int i=0; i<contentLength; ++i){
-
+          for(int i = 0; i < contentLength; ++i){
             message = message + (char)sendInFromClient.read();
-
           }
+          // Printing message
+          System.out.println("Message sent: " + message);
           // Now forwarding the message
           String forwardResponse = messageForwardToClient(recipient, message);
-          System.out.println(forwardResponse);
           if(forwardResponse.startsWith("RECEIVED")) {
               return "SENT " + recipient + "\n\n";
           }
@@ -236,7 +274,6 @@ class ClientHandler implements Runnable {
         else {
           return error103Message;
         }
-
       }
       else { 
         // NOTE: We should also send some message to client so that connection is closed
@@ -248,8 +285,6 @@ class ClientHandler implements Runnable {
       // What error to throw here
       return error103Message;
     }
-
-
   }
 
   public void run() {
@@ -271,8 +306,12 @@ class ClientHandler implements Runnable {
           System.out.println(this.clientSentence);
           this.clientSentenceTemp = sendInFromClient.readLine(); // This should be a blank string, to check if \n coming in request
           outputToClient = register(false);
-        }
-        else { 
+        } else if(this.publicKey == null) {
+          this.clientSentence = sendInFromClient.readLine();
+          System.out.println(this.clientSentence);
+          this.clientSentenceTemp = sendInFromClient.readLine();
+          outputToClient = registerPublicKey();
+        } else { 
           // User registered, send and receive messages now
           outputToClient = processMessageSendFromClient();
         }
