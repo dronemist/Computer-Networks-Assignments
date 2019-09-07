@@ -4,11 +4,11 @@ import java.security.*;
 import java.util.*;
 
 class TCPClient {
- 
+
   MessageReceiver messageReceiver;
   MessageSender messageSender;
   public static void main(String argv[]) throws Exception
-    {   
+    {
       String clientSendingProtocol;
       String clientReceivingProtocol;
       String sentence = "test";
@@ -20,6 +20,7 @@ class TCPClient {
 
       Socket sendSocket = new Socket("localhost", 6791);
       Socket recieveSocket = new Socket("localhost", 6791);
+
       DataOutputStream sendOutToServer =
         new DataOutputStream(sendSocket.getOutputStream());
 
@@ -34,6 +35,9 @@ class TCPClient {
         new BufferedReader(new
         InputStreamReader(recieveSocket.getInputStream()));
 
+      //Getting mode from the server
+      int mode = Integer.parseInt(recieveInFromServer.readLine());
+
       String username = "";
       // for registration
       while(!modifiedSentence.startsWith("REGISTERED TOSEND")) {
@@ -44,7 +48,7 @@ class TCPClient {
         sendOutToServer.writeBytes(clientSendingProtocol);
         modifiedSentence = sendInFromServer.readLine();
         System.out.println(modifiedSentence);
-        sendInFromServer.readLine(); 
+        sendInFromServer.readLine();
         // For the addditional \n sent by the Server
       }
 
@@ -54,7 +58,7 @@ class TCPClient {
         sendOutToServer.writeBytes(clientSendingProtocol);
         modifiedSentence = sendInFromServer.readLine();
         System.out.println(modifiedSentence);
-        sendInFromServer.readLine(); 
+        sendInFromServer.readLine();
         // For the addditional \n sent by the Server
       }
 
@@ -69,17 +73,17 @@ class TCPClient {
         sendOutToServer.writeBytes(clientSendingProtocol);
         modifiedSentence = sendInFromServer.readLine();
         System.out.println(modifiedSentence);
-        sendInFromServer.readLine(); 
+        sendInFromServer.readLine();
         // For the addditional \n sent by the Server
       }
       // registration done
 
-      MessageReceiver messageReceiver = new MessageReceiver(recieveSocket, recieveInFromServer, recieveOutToServer, keyPair);
+      MessageReceiver messageReceiver = new MessageReceiver(recieveSocket, recieveInFromServer, recieveOutToServer, keyPair, mode);
       Thread receiver_thread = new Thread(messageReceiver);
       System.out.println("Receiver started");
       receiver_thread.start();
 
-      MessageSender messageSender = new MessageSender(sendSocket, sendOutToServer, inFromUser, sendInFromServer, keyPair);
+      MessageSender messageSender = new MessageSender(sendSocket, sendOutToServer, inFromUser, sendInFromServer, keyPair, mode);
       Thread sender_thread = new Thread(messageSender);
       System.out.println("Sender started");
       sender_thread.start();
@@ -92,14 +96,16 @@ class MessageReceiver implements Runnable {
   DataOutputStream recieveOutToServer;
   String serverSentence;
   KeyPair keyPair;
+  int mode;
 
   MessageReceiver (Socket recieveSocket, BufferedReader inFromServer, DataOutputStream outToServer,
-  KeyPair keyPair) { 
+  KeyPair keyPair, int mode) {
     // Receives messages, sends acknowledgements
     this.recieveSocket = recieveSocket;
     this.recieveInFromServer = inFromServer;
     this.recieveOutToServer = outToServer;
     this.keyPair = keyPair;
+    this.mode = mode;
   }
 
   byte[] getPrivateKeyInByte() {
@@ -115,23 +121,29 @@ class MessageReceiver implements Runnable {
         this.serverSentence = this.recieveInFromServer.readLine();
         String[] temp = this.serverSentence.split(" ");
 
-        if(temp.length == 2 && temp[0].equals("FORWARD")) { 
+        if(temp.length == 2 && temp[0].equals("FORWARD")) {
           // To check whether first line is okay
-          String sender = null;
-          String message = null;
+          String sender;
+          String message ;
           String hashSignature = null;
           sender = temp[1];
-          
+
           this.serverSentence = this.recieveInFromServer.readLine();
           // System.out.println(this.serverSentence);
-          String hashSignatureArray[] = this.recieveInFromServer.readLine().split(" "); 
+          String hashSignatureArray[] = null;
+          if(mode == 3){
+            hashSignatureArray = this.recieveInFromServer.readLine().split(" ");
+          }
           temp = this.serverSentence.split(" ");
-          if(temp.length == 2 && temp[0].equals("Content-length:") &&
-          hashSignatureArray.length == 2 && hashSignatureArray[0].equals("SIGNATURE:")
-          && this.recieveInFromServer.readLine().length() == 0) { 
+          if(temp.length == 2 && temp[0].equals("Content-length:") && this.recieveInFromServer.readLine().length() == 0 &&
+                (mode !=3 || (hashSignatureArray.length == 2 && hashSignatureArray[0].equals("SIGNATURE:"))))
+
+          {
 
             // Checking if content-length header is okay and next line is blank
-            hashSignature = hashSignatureArray[1];
+            if(mode == 3){
+              hashSignature = hashSignatureArray[1];
+            }
             int contentLength = Integer.parseInt(temp[1]);
             message = "";
             for(int i=0; i<contentLength; ++i) {
@@ -155,17 +167,27 @@ class MessageReceiver implements Runnable {
             }
             // MODE: DECRYPT OR NOT
             // Decrypting the message
-            byte[] messageInBytes = Base64.getDecoder().decode(message);
-            byte[] decryptedMessage = CryptographyExample.decrypt(this.getPrivateKeyInByte(), messageInBytes);
-            message = new String(decryptedMessage);
+            byte[] messageInBytes = null;
+            byte[] decryptedMessage;
+            if(mode != 1){
+              messageInBytes = Base64.getDecoder().decode(message);
+              decryptedMessage = CryptographyExample.decrypt(this.getPrivateKeyInByte(), messageInBytes);
+              message = new String(decryptedMessage);
+            }
             // System.out.println("rec: " + decryptedMessage);
             // MODE: Decrypting signature
-            byte[] hashSignatureInBytes = Base64.getDecoder().decode(hashSignature);
-            byte[] publicKeyInBytes = Base64.getDecoder().decode(publicKey);
-            byte[] decryptedSignature = CryptographyExample.decryptByPublicKey(publicKeyInBytes, hashSignatureInBytes);
-            String decryptedSignatureInString = new String(decryptedSignature);
+            byte[] hashSignatureInBytes;
+            byte[] publicKeyInBytes;
+            byte[] decryptedSignature;
+            String decryptedSignatureInString = null;
+            if(mode == 3){
+              hashSignatureInBytes = Base64.getDecoder().decode(hashSignature);
+              publicKeyInBytes = Base64.getDecoder().decode(publicKey);
+              decryptedSignature = CryptographyExample.decryptByPublicKey(publicKeyInBytes, hashSignatureInBytes);
+              decryptedSignatureInString = new String(decryptedSignature);
+            }
 
-            if(new String(MD5.getMd5(messageInBytes)).equals(decryptedSignatureInString)) {
+            if(mode != 3 || new String(MD5.getMd5(messageInBytes)).equals(decryptedSignatureInString)) {
               // Printing output
               System.out.println("#" + sender + ": " + message);
 
@@ -188,10 +210,10 @@ class MessageReceiver implements Runnable {
         try {
           this.recieveSocket.close();
           break;
-        } catch(Exception ee) { 
+        } catch(Exception ee) {
           break;
         }
-          
+
       }
     }
   }
@@ -205,14 +227,16 @@ class MessageSender implements Runnable {
   String clientSentence;
   String messageSendProtocol;
   KeyPair keyPair;
+  int mode;
 
   MessageSender (Socket sendSocket, DataOutputStream outToServer, BufferedReader inFromUser
-  , BufferedReader inFromServer, KeyPair keyPair) {  //Sends messages, receives acknowledgements
+  , BufferedReader inFromServer, KeyPair keyPair, int mode) {  //Sends messages, receives acknowledgements
     this.sendSocket = sendSocket;
     this.outToServer = outToServer;
     this.inFromServer = inFromServer;
     this.inFromUser = inFromUser;
     this.keyPair = keyPair;
+    this.mode = mode;
   }
 
   byte[] getPrivateKeyInByte() {
@@ -230,48 +254,59 @@ class MessageSender implements Runnable {
         String message = "";
         String recipient;
         if(temp.length > 1 && temp[0].startsWith("@")) {
-          recipient = temp[0].substring(1, temp[0].length() - 1);
-          message = this.clientSentence.substring(1 + recipient.length() + 2);
+          recipient = temp[0].substring(1, temp[0].length());
+          message = this.clientSentence.substring(recipient.length() + 2);
 
           // asking for public key
           // MODE
           this.messageSendProtocol = "FETCHKEY " + recipient + "\n\n";
           outToServer.writeBytes(this.messageSendProtocol);
-          
+
           String tempString = inFromServer.readLine();
-          String tempArray[] = tempString.split(" ");  
+          String tempArray[] = tempString.split(" ");
 
           // If we get the public key
           // MODE: ENCRYPT OR NOT
           if(tempArray[0].startsWith("PUBLICKEY") && inFromServer.readLine().equalsIgnoreCase("")) {
 
             // getting public key
-            String publicKey = tempArray[1];
-            byte[] publicKeyInBytes = Base64.getDecoder().decode(publicKey);
-            
-            // encrypting the message
-            byte[] messageInBytes = message.getBytes();
-            byte[] encryptedMessage = CryptographyExample.encrypt(publicKeyInBytes, messageInBytes);
-            message = Base64.getEncoder().encodeToString(encryptedMessage);
+            if(mode == 1){
+              this.messageSendProtocol = "SEND " + recipient + "\n" + "Content-length: " + Integer.toString(message.length()) + "\n\n" + message;
+            }
+            else{
+              String publicKey = tempArray[1];
+              byte[] publicKeyInBytes = Base64.getDecoder().decode(publicKey);
 
-            // Getting hash signature
-            byte[] hashSignature = MD5.getMd5(encryptedMessage);
-            byte[] encryptedHashInBytes = CryptographyExample.encryptByPrivateKey(this.getPrivateKeyInByte(), hashSignature);
-            String encryptedHashInString = Base64.getEncoder().encodeToString(encryptedHashInBytes);
-            
-            // MODE: Uncomment for normal message protocol
-            // sending to server
-            // this.messageSendProtocol = "SEND " + recipient + "\n" + "Content-length: " + Integer.toString(message.length()) + "\n\n" + message;
-            // outToServer.writeBytes(this.messageSendProtocol);
+              // encrypting the message
+              byte[] messageInBytes = message.getBytes();
+              byte[] encryptedMessage = CryptographyExample.encrypt(publicKeyInBytes, messageInBytes);
+              message = Base64.getEncoder().encodeToString(encryptedMessage);
 
-            // message protocol with signature  
-            this.messageSendProtocol = "SEND " + recipient + "\n" + "Content-length: " + Integer.toString(message.length()) 
-            + "\n" + "SIGNATURE: " + encryptedHashInString + "\n\n" + message;
+              // Getting hash signature
+              byte[] hashSignature = MD5.getMd5(encryptedMessage);
+              byte[] encryptedHashInBytes = CryptographyExample.encryptByPrivateKey(this.getPrivateKeyInByte(), hashSignature);
+              String encryptedHashInString = Base64.getEncoder().encodeToString(encryptedHashInBytes);
+
+              // MODE: Uncomment for normal message protocol
+              // sending to server
+              // this.messageSendProtocol = "SEND " + recipient + "\n" + "Content-length: " + Integer.toString(message.length()) + "\n\n" + message;
+              // outToServer.writeBytes(this.messageSendProtocol);
+
+              // message protocol with signature
+              if(mode == 3){
+                this.messageSendProtocol = "SEND " + recipient + "\n" + "Content-length: " + Integer.toString(message.length())
+                + "\n" + "SIGNATURE: " + encryptedHashInString + "\n\n" + message;
+              }
+              else{ //no signature if mode = 2
+                this.messageSendProtocol = "SEND " + recipient + "\n" + "Content-length: " + Integer.toString(message.length())
+                + "\n\n" + message;
+              }
+            }
             outToServer.writeBytes(this.messageSendProtocol);
 
             // Server acknowledgement
             System.out.println(inFromServer.readLine());
-            System.out.print(inFromServer.readLine());
+            System.out.println(inFromServer.readLine());
           } else {
             System.out.println(tempString);
           }
@@ -282,7 +317,7 @@ class MessageSender implements Runnable {
           this.sendSocket.close();
           System.out.println(e);
           break;
-        } catch(Exception ee) { 
+        } catch(Exception ee) {
           break;
         }
       }

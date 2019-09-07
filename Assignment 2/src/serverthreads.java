@@ -10,6 +10,21 @@ class TCPServer {
   {
     TCPServer server = new TCPServer();
     ServerSocket welcomeSocket = new ServerSocket(6791);
+    Scanner input = new Scanner(System.in);
+    int mode = -1;
+    while(!(mode >= 1 && mode <= 3)){
+      System.out.println("Enter which mode to start the server in");
+      try{
+        mode = input.nextInt(); // mode = 0 is uncrypted, 1 is encrption without hash, 2 is encryption with hash
+        if(!(mode >= 1 && mode <= 3)){
+            System.out.println("Mode should be an integer between 1 and 3, try again");
+        }
+      }
+      catch(Exception e){
+        System.out.println("Mode should be an integer between 1 and 3, try again");
+      }
+    }
+    input.close();
     welcomeSocket.setSoTimeout(40000);
     try {
       while(true)
@@ -19,22 +34,27 @@ class TCPServer {
         /// the recieve socket of the client is attached to this socket
         Socket recieveClientSocket = welcomeSocket.accept();
 
+
+
         BufferedReader sendInFromClient =
         new BufferedReader(new
         InputStreamReader(sendClientSocket.getInputStream()));
 
         DataOutputStream sendOutToClient =
         new DataOutputStream(sendClientSocket.getOutputStream());
-        
+
         BufferedReader recieveInFromClient =
         new BufferedReader(new
         InputStreamReader(recieveClientSocket.getInputStream()));
 
         DataOutputStream recieveOutToClient =
-        new DataOutputStream(recieveClientSocket.getOutputStream());  
+        new DataOutputStream(recieveClientSocket.getOutputStream());
 
-        ClientHandler clientHandler = new ClientHandler(sendClientSocket, recieveClientSocket, 
-        server, sendInFromClient, sendOutToClient, recieveInFromClient, recieveOutToClient);
+        //telling the mode to each client
+        recieveOutToClient.writeBytes(Integer.toString(mode) + "\n");
+
+        ClientHandler clientHandler = new ClientHandler(sendClientSocket, recieveClientSocket,
+        server, sendInFromClient, sendOutToClient, recieveInFromClient, recieveOutToClient, mode);
         Thread thread = new Thread(clientHandler);
         thread.start();
       }
@@ -48,9 +68,11 @@ class TCPServer {
 
 class ClientHandler implements Runnable {
 
+  int mode;
+
   String clientSentence;
   /// To check if another \n entered by user
-  String clientSentenceTemp; 
+  String clientSentenceTemp;
   Socket sendClientSocket;
   Socket recieveClientSocket;
   TCPServer server;
@@ -68,9 +90,10 @@ class ClientHandler implements Runnable {
 
   /// This function registers the clienthandler
   // NOTE: need to correct a few things
-  ClientHandler (Socket inputFromClientSocket, Socket outputToClientSocket, TCPServer server, 
+  ClientHandler (Socket inputFromClientSocket, Socket outputToClientSocket, TCPServer server,
   BufferedReader sendInFromClient, DataOutputStream sendOutToClient,
-  BufferedReader recieveInFromClient, DataOutputStream recieveOutToClient) {
+  BufferedReader recieveInFromClient, DataOutputStream recieveOutToClient, int mode) {
+    this.mode = mode;
     this.sendClientSocket = inputFromClientSocket;
     this.recieveClientSocket = outputToClientSocket;
     this.sendInFromClient = sendInFromClient;
@@ -83,7 +106,7 @@ class ClientHandler implements Runnable {
     this.publicKey = null;
   }
 
-  boolean usernameWellFormed(String username) { 
+  boolean usernameWellFormed(String username) {
     // true if username well formed, else false
     return username.chars().allMatch(Character::isLetterOrDigit);
   }
@@ -101,8 +124,8 @@ class ClientHandler implements Runnable {
     // Error commands
     String error104MessageString = "ERROR 104 CANNOT REGISTER PUBLIC KEY\n\n";
 
-    if(this.clientSentenceTemp.length() == 0 
-    && this.clientSentence.startsWith(commandToRegisterKey) 
+    if(this.clientSentenceTemp.length() == 0
+    && this.clientSentence.startsWith(commandToRegisterKey)
     && this.receiveUsername != null) {
         this.publicKey = temp[2];
         server.publicKeys.put(this.receiveUsername, temp[2]);
@@ -113,7 +136,7 @@ class ClientHandler implements Runnable {
   }
 
   /// registerSend true if sendUsername = null and false if sendUsername != null and receiveUsername = null
-  String register(boolean registerSend) { 
+  String register(boolean registerSend) {
     String[] temp = this.clientSentence.split(" ");
 
     // Registration commands
@@ -130,19 +153,19 @@ class ClientHandler implements Runnable {
     String error101RecvUserMessage = "ERROR 101 No User registered\n\n";
 
     // To check if another \n entered by user
-    if(this.clientSentenceTemp.length() == 0){ 
-      if(registerSend){ 
+    if(this.clientSentenceTemp.length() == 0){
+      if(registerSend){
         // if registerSend is true then set sendUsername else set receiveUsername
         if(this.clientSentence.startsWith(commandToRegisterSend)) {
           String usernameEntered;
           if(temp.length == 3) {
             usernameEntered = temp[2];
           }
-          else { 
+          else {
             // if more spaces, then Malformed
             return error100Message;
           }
-          if(usernameWellFormed(usernameEntered)) { 
+          if(usernameWellFormed(usernameEntered)) {
             // register the user
             this.sendUsername = usernameEntered;
             return registeredSend + this.sendUsername + "\n\n";
@@ -156,14 +179,14 @@ class ClientHandler implements Runnable {
           return error101SendUserMessage;
         }
       }
-      else {  
+      else {
         // if registerSend == false, then registerReceive
         if(this.clientSentence.startsWith(commandToRegisterReceive)){
           String usernameEntered;
           if(temp.length == 3){
             usernameEntered = temp[2];
           }
-          else { 
+          else {
             return error100Message;
           }
           if(usernameWellFormed(usernameEntered)){ //register the user
@@ -194,14 +217,20 @@ class ClientHandler implements Runnable {
 
     String messageForwardProtocol = "";
     // MODE: UNCOMMENT
-    // messageForwardProtocol = "FORWARD " + this.sendUsername + "\n" + "Content-length: " + Integer.toString(message.length()) 
+    // messageForwardProtocol = "FORWARD " + this.sendUsername + "\n" + "Content-length: " + Integer.toString(message.length())
     // + "\n\n" + message;
 
     // DOUBT: I am not sure if public key needs to be sent in the same message
     // because we are checking for message integrity
 
-    messageForwardProtocol = "FORWARD " + this.sendUsername + "\n" + "Content-length: " + Integer.toString(message.length()) 
-    + "\n" + "SIGNATURE: " + hashSignature + "\n\n" + message;
+    if(mode == 3){
+      messageForwardProtocol = "FORWARD " + this.sendUsername + "\n" + "Content-length: " + Integer.toString(message.length())
+      + "\n" + "SIGNATURE: " + hashSignature + "\n\n" + message;
+    }
+    else{
+      messageForwardProtocol = "FORWARD " + this.sendUsername + "\n" + "Content-length: " + Integer.toString(message.length())
+      + "\n\n" + message;
+    }
 
     ClientHandler recipientClientHandler = this.server.users.get(recipient);
     if(recipientClientHandler == null) {
@@ -222,7 +251,7 @@ class ClientHandler implements Runnable {
         {
           publicKey = server.publicKeys.get(inputFromReceiver[1]);
           String publicKeyProtocol = "PUBLICKEY " + publicKey + "\n\n";
-          if(publicKey != null) { 
+          if(publicKey != null) {
             recipientClientHandler.recieveOutToClient.writeBytes(publicKeyProtocol);
           } else {
             recipientClientHandler.recieveOutToClient.writeBytes(error106Message);
@@ -230,10 +259,10 @@ class ClientHandler implements Runnable {
           }
         }
         // NOTE: Problem can occur in thread synchronization
-        // DOUBT: should we send a different error if message not consistent? 
+        // DOUBT: should we send a different error if message not consistent?
         String acknowledgement = recipientClientHandler.recieveInFromClient.readLine();
         System.out.println(acknowledgement);
-        if(acknowledgement.equals("RECEIVED " + this.sendUsername) && recipientClientHandler.recieveInFromClient.readLine().equals("")){ 
+        if(acknowledgement.equals("RECEIVED " + this.sendUsername) && recipientClientHandler.recieveInFromClient.readLine().equals("")){
           // Check if proper header format
           return acknowledgement;
         }
@@ -255,7 +284,7 @@ class ClientHandler implements Runnable {
     String error106Message = "ERROR 106 No public Key found\n\n";
     try {
       this.clientSentence = sendInFromClient.readLine();
-      
+
       String[] temp = this.clientSentence.split(" ");
       if(temp.length == 2 && temp[0].equals("FETCHKEY")) {
         String recipient = temp[1];
@@ -266,7 +295,7 @@ class ClientHandler implements Runnable {
           return error106Message;
         }
       }
-      if(temp.length == 2 && temp[0].equals("SEND")) { 
+      if(temp.length == 2 && temp[0].equals("SEND")) {
 
         // To check whether first line is okay
         String recipient = null;
@@ -276,19 +305,27 @@ class ClientHandler implements Runnable {
 
         this.clientSentence = sendInFromClient.readLine();
         temp = this.clientSentence.split(" ");
-        String hashSignatureArray[] = sendInFromClient.readLine().split(" ");
+        String hashSignatureArray[] = null;
+        if(mode == 3){
+           hashSignatureArray = sendInFromClient.readLine().split(" ");
+        }
 
         // Checking if content-length header is okay and next line is blank
-        if(temp.length == 2 && temp[0].equals("Content-length:") 
+        if(temp.length == 2 && temp[0].equals("Content-length:")   && sendInFromClient.readLine().length() == 0
+        && ( mode != 3 || hashSignatureArray.length == 2 && hashSignatureArray[0].equals("SIGNATURE:") )) // mode = 3 implies checkHash
+
         // MODE: See this if for mode
-        && hashSignatureArray.length == 2 && hashSignatureArray[0].equals("SIGNATURE:") 
-        && sendInFromClient.readLine().length() == 0) { 
+
+        {
+
           int contentLength = Integer.parseInt(temp[1]);
           message = "";
           for(int i = 0; i < contentLength; ++i){
             message = message + (char)sendInFromClient.read();
           }
-          hashSignature = hashSignatureArray[1];
+          if(mode == 3){
+            hashSignature = hashSignatureArray[1];
+          }
 
           // Printing message
           System.out.println("Message sent: " + message);
@@ -307,13 +344,13 @@ class ClientHandler implements Runnable {
           return error103Message;
         }
       }
-      else { 
+      else {
         // NOTE: We should also send some message to client so that connection is closed
         // System.out.println("here1");
         return error103Message;
       }
     }
-    catch(Exception e){ 
+    catch(Exception e){
       // What error to throw here
       return error103Message;
     }
@@ -343,7 +380,7 @@ class ClientHandler implements Runnable {
           System.out.println(this.clientSentence);
           this.clientSentenceTemp = sendInFromClient.readLine();
           outputToClient = registerPublicKey();
-        } else { 
+        } else {
           // User registered, send and receive messages now
           outputToClient = processMessageSendFromClient();
         }
