@@ -211,6 +211,21 @@ class ClientHandler implements Runnable {
   }
   // MODE: argument of hashSignature
 
+  void unregisterUser(){
+    server.users.remove(this.receiveUsername);
+    server.publicKeys.remove(this.receiveUsername);
+    this.receiveUsername = null;
+    this.sendUsername = null;
+    this.publicKey = null;
+  }
+
+  String error103Message(){ // Whenever error 103, Close the connection
+    String error103Message = "ERROR 103 Header incomplete\n\n";
+    unregisterUser();
+
+    return error103Message;
+  }
+
   String messageForwardToClient(String recipient, String message, String hashSignature) {
     String error102Message = "ERROR 102 UNABLE TO SEND\n\n";
     String error106Message = "ERROR 106 No public key found\n\n";
@@ -223,6 +238,7 @@ class ClientHandler implements Runnable {
     // DOUBT: I am not sure if public key needs to be sent in the same message
     // because we are checking for message integrity
 
+
     if(mode == 3){
       messageForwardProtocol = "FORWARD " + this.sendUsername + "\n" + "Content-length: " + Integer.toString(message.length())
       + "\n" + "SIGNATURE: " + hashSignature + "\n\n" + message;
@@ -233,6 +249,8 @@ class ClientHandler implements Runnable {
     }
 
     ClientHandler recipientClientHandler = this.server.users.get(recipient);
+    // System.out.println(recipient);
+
     if(recipientClientHandler == null) {
 
       return error102Message;
@@ -245,6 +263,7 @@ class ClientHandler implements Runnable {
         String inputFromReceiver[] = recipientClientHandler.recieveInFromClient.readLine().split(" ");
         // DOUBT: should we check directly send or wait for reciever to request public key
         String publicKey;
+
         if(inputFromReceiver.length == 2 &&
         inputFromReceiver[0].startsWith("FETCHKEY") &&
         recipientClientHandler.recieveInFromClient.readLine().equals(""))
@@ -261,7 +280,7 @@ class ClientHandler implements Runnable {
         // NOTE: Problem can occur in thread synchronization
         // DOUBT: should we send a different error if message not consistent?
         String acknowledgement = recipientClientHandler.recieveInFromClient.readLine();
-        System.out.println(acknowledgement);
+        // System.out.println(acknowledgement);
         if(acknowledgement.equals("RECEIVED " + this.sendUsername) && recipientClientHandler.recieveInFromClient.readLine().equals("")){
           // Check if proper header format
           return acknowledgement;
@@ -280,18 +299,41 @@ class ClientHandler implements Runnable {
 
   String processMessageSendFromClient(){
 
-    String error103Message = "ERROR 103 Header incomplete\n\n";
+    // String error103Message = "ERROR 103 Header incomplete\n\n";
     String error106Message = "ERROR 106 No public Key found\n\n";
+    String unregisteredMessage = "Unregistered " + this.receiveUsername + "\n\n";
+
     try {
       this.clientSentence = sendInFromClient.readLine();
 
       String[] temp = this.clientSentence.split(" ");
+
+      if(temp[0].equals("UNREGISTER")){
+        if(sendInFromClient.readLine().equals("")){
+          //unregistering
+          unregisterUser();
+
+          // recipientClientHandler.recieveOutToClient.writeBytes(unregisteredMessage);
+
+          return unregisteredMessage;
+        }
+        else{
+          return error103Message();
+        }
+      }
+
       if(temp.length == 2 && temp[0].equals("FETCHKEY")) {
         String recipient = temp[1];
         String publicKey = server.publicKeys.get(recipient);
-        if(publicKey != null && sendInFromClient.readLine().length() == 0) {
-          return "PUBLICKEY " + publicKey + "\n\n";
+        if(publicKey != null) {
+          if(sendInFromClient.readLine().length() == 0){
+            return "PUBLICKEY " + publicKey + "\n\n";
+          }
+          else{
+            return error103Message();
+          }
         } else {
+          sendInFromClient.readLine();  // For the extra \n
           return error106Message;
         }
       }
@@ -328,10 +370,11 @@ class ClientHandler implements Runnable {
           }
 
           // Printing message
-          System.out.println("Message sent: " + message);
+          // System.out.println("Message sent: " + message);
 
           // Now forwarding the message
           String forwardResponse = messageForwardToClient(recipient, message, hashSignature);
+
           if(forwardResponse.startsWith("RECEIVED")) {
               return "SENT " + recipient + "\n\n";
           }
@@ -341,22 +384,23 @@ class ClientHandler implements Runnable {
 
         }
         else {
-          return error103Message;
+          return error103Message();
         }
       }
       else {
         // NOTE: We should also send some message to client so that connection is closed
         // System.out.println("here1");
-        return error103Message;
+        return error103Message();
       }
     }
     catch(Exception e){
       // What error to throw here
-      return error103Message;
+      return error103Message();
     }
   }
 
   public void run() {
+    String error103Message = "ERROR 103 Header incomplete\n\n";
     while(true) {
       try {
         // NOTE: Can a user register its senderusername again?
@@ -383,12 +427,21 @@ class ClientHandler implements Runnable {
         } else {
           // User registered, send and receive messages now
           outputToClient = processMessageSendFromClient();
+          System.out.println(outputToClient);
         }
         if(outputToClient != null) {
           sendOutToClient.writeBytes(outputToClient);
         }
+        if(outputToClient.equals(error103Message)){ //Close the connection in this case from server side
+          this.recieveInFromClient.close();
+          this.recieveOutToClient.close();
+          this.sendClientSocket.close();
+          this.recieveClientSocket.close();
+        }
       } catch(Exception e) {
         try {
+          this.recieveInFromClient.close();
+          this.recieveOutToClient.close();
           this.sendClientSocket.close();
           this.recieveClientSocket.close();
         } catch(Exception ee) { }

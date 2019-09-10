@@ -18,8 +18,11 @@ class TCPClient {
       BufferedReader inFromUser =
       new BufferedReader(new InputStreamReader(System.in));
 
-      Socket sendSocket = new Socket("localhost", 6791);
-      Socket recieveSocket = new Socket("localhost", 6791);
+      System.out.println("Enter the IP of the host");
+      String hostAddress = inFromUser.readLine();
+
+      Socket sendSocket = new Socket(hostAddress, 6791);
+      Socket recieveSocket = new Socket(hostAddress, 6791);
 
       DataOutputStream sendOutToServer =
         new DataOutputStream(sendSocket.getOutputStream());
@@ -253,62 +256,79 @@ class MessageSender implements Runnable {
         String[] temp = this.clientSentence.split(" ");
         String message = "";
         String recipient;
-        if(temp.length > 1 && temp[0].startsWith("@")) {
-          recipient = temp[0].substring(1, temp[0].length());
-          message = this.clientSentence.substring(recipient.length() + 2);
-
-          // asking for public key
-          // MODE
-          this.messageSendProtocol = "FETCHKEY " + recipient + "\n\n";
+        String tempString = null;
+        if(this.clientSentence.equals("UNREGISTER")){
+          this.messageSendProtocol = temp[0] + "\n\n";
           outToServer.writeBytes(this.messageSendProtocol);
+          System.out.println(inFromServer.readLine());
+          System.out.println(inFromServer.readLine());
+        }
+        else{
+          if(temp.length > 1 && temp[0].startsWith("@")) {
+            recipient = temp[0].substring(1, temp[0].length());
+            message = this.clientSentence.substring(recipient.length() + 2);
 
-          String tempString = inFromServer.readLine();
-          String tempArray[] = tempString.split(" ");
-
-          // If we get the public key
-          // MODE: ENCRYPT OR NOT
-          if(tempArray[0].startsWith("PUBLICKEY") && inFromServer.readLine().equalsIgnoreCase("")) {
-
-            // getting public key
-            if(mode == 1){
-              this.messageSendProtocol = "SEND " + recipient + "\n" + "Content-length: " + Integer.toString(message.length()) + "\n\n" + message;
-            }
-            else{
-              String publicKey = tempArray[1];
-              byte[] publicKeyInBytes = Base64.getDecoder().decode(publicKey);
-
-              // encrypting the message
-              byte[] messageInBytes = message.getBytes();
-              byte[] encryptedMessage = CryptographyExample.encrypt(publicKeyInBytes, messageInBytes);
-              message = Base64.getEncoder().encodeToString(encryptedMessage);
-
-              // Getting hash signature
-              byte[] hashSignature = MD5.getMd5(encryptedMessage);
-              byte[] encryptedHashInBytes = CryptographyExample.encryptByPrivateKey(this.getPrivateKeyInByte(), hashSignature);
-              String encryptedHashInString = Base64.getEncoder().encodeToString(encryptedHashInBytes);
-
-              // MODE: Uncomment for normal message protocol
-              // sending to server
-              // this.messageSendProtocol = "SEND " + recipient + "\n" + "Content-length: " + Integer.toString(message.length()) + "\n\n" + message;
-              // outToServer.writeBytes(this.messageSendProtocol);
-
-              // message protocol with signature
-              if(mode == 3){
-                this.messageSendProtocol = "SEND " + recipient + "\n" + "Content-length: " + Integer.toString(message.length())
-                + "\n" + "SIGNATURE: " + encryptedHashInString + "\n\n" + message;
-              }
-              else{ //no signature if mode = 2
-                this.messageSendProtocol = "SEND " + recipient + "\n" + "Content-length: " + Integer.toString(message.length())
-                + "\n\n" + message;
-              }
-            }
+            // asking for public key
+            // MODE
+            this.messageSendProtocol = "FETCHKEY " + recipient + "\n\n";
             outToServer.writeBytes(this.messageSendProtocol);
 
-            // Server acknowledgement
-            System.out.println(inFromServer.readLine());
-            System.out.println(inFromServer.readLine());
+            tempString = inFromServer.readLine();
+            String tempArray[] = tempString.split(" ");
+
+            // If we get the public key
+            // MODE: ENCRYPT OR NOT
+            if(tempArray[0].startsWith("PUBLICKEY") && inFromServer.readLine().equalsIgnoreCase("")) {
+
+              // getting public key
+              if(mode == 1){
+                this.messageSendProtocol = "SEND " + recipient + "\n" + "Content-length: " + Integer.toString(message.length()) + "\n\n" + message;
+              }
+              else{
+                String publicKey = tempArray[1];
+                byte[] publicKeyInBytes = Base64.getDecoder().decode(publicKey);
+
+                // encrypting the message
+                byte[] messageInBytes = message.getBytes();
+                byte[] encryptedMessage = CryptographyExample.encrypt(publicKeyInBytes, messageInBytes);
+                message = Base64.getEncoder().encodeToString(encryptedMessage);
+
+                // Getting hash signature
+                byte[] hashSignature = MD5.getMd5(encryptedMessage);
+                byte[] encryptedHashInBytes = CryptographyExample.encryptByPrivateKey(this.getPrivateKeyInByte(), hashSignature);
+                String encryptedHashInString = Base64.getEncoder().encodeToString(encryptedHashInBytes);
+
+                // MODE: Uncomment for normal message protocol
+                // sending to server
+                // this.messageSendProtocol = "SEND " + recipient + "\n" + "Content-length: " + Integer.toString(message.length()) + "\n\n" + message;
+                // outToServer.writeBytes(this.messageSendProtocol);
+
+                // message protocol with signature
+                if(mode == 3){
+                  this.messageSendProtocol = "SEND " + recipient + "\n" + "Content-length: " + Integer.toString(message.length())
+                  + "\n" + "SIGNATURE: " + encryptedHashInString + "\n\n" + message;
+                }
+                else{ //no signature if mode = 2
+                  this.messageSendProtocol = "SEND " + recipient + "\n" + "Content-length: " + Integer.toString(message.length())
+                  + "\n\n" + message;
+                }
+              }
+              outToServer.writeBytes(this.messageSendProtocol);
+
+              // Server acknowledgement
+              // System.out.println("here");
+              System.out.println(inFromServer.readLine());
+              System.out.println(inFromServer.readLine());
+
+            }
+            else{
+              System.out.println(tempString);
+              System.out.println(inFromServer.readLine());
+              // System.out.println(inFromServer.readLine());
+              // System.out.println(inFromServer.readLine());
+            }
           } else {
-            System.out.println(tempString);
+            System.out.println("Please enter message in proper format \n");
           }
         }
       } catch(Exception e) {
