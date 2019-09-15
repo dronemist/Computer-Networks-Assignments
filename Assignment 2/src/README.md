@@ -3,9 +3,9 @@
 ### Opening the server   
 run the following code ```java TCPServer```
 #### Server modes
-1: unencrypted chat application . 
-2: encrypted chat application .  
-3: encrypted with signatures application . 
+1: unencrypted chat application <br/>
+2: encrypted chat application <br/>
+3: encrypted with signatures application <br/>  
 
 ### Client
 run the following code ```java TCPClient```
