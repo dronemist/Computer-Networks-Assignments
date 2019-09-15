@@ -15,7 +15,8 @@ class TCPServer {
     while(!(mode >= 1 && mode <= 3)){
       System.out.println("Enter which mode to start the server in");
       try{
-        mode = input.nextInt(); // mode = 0 is uncrypted, 1 is encrption without hash, 2 is encryption with hash
+        mode = input.nextInt(); 
+        // mode = 1 is uncrypted, 2 is encrption without hash, 3 is encryption with hash
         if(!(mode >= 1 && mode <= 3)){
             System.out.println("Mode should be an integer between 1 and 3, try again");
         }
@@ -25,7 +26,6 @@ class TCPServer {
       }
     }
     input.close();
-    welcomeSocket.setSoTimeout(40000);
     try {
       while(true)
       {
@@ -302,6 +302,7 @@ class ClientHandler implements Runnable {
     // String error103Message = "ERROR 103 Header incomplete\n\n";
     String error106Message = "ERROR 106 No public Key found\n\n";
     String unregisteredMessage = "Unregistered " + this.receiveUsername + "\n\n";
+    String error102Message = "ERROR 102 UNABLE TO SEND\n\n";
 
     try {
       this.clientSentence = sendInFromClient.readLine();
@@ -329,11 +330,15 @@ class ClientHandler implements Runnable {
           if(sendInFromClient.readLine().length() == 0){
             return "PUBLICKEY " + publicKey + "\n\n";
           }
-          else{
+          else {
             return error103Message();
           }
         } else {
-          sendInFromClient.readLine();  // For the extra \n
+          sendInFromClient.readLine();
+          // For the extra \n
+          if(mode == 1) {
+            return error102Message;
+          }
           return error106Message;
         }
       }
@@ -370,7 +375,7 @@ class ClientHandler implements Runnable {
           }
 
           // Printing message
-          // System.out.println("Message sent: " + message);
+          System.out.println("Message sent: " + message);
 
           // Now forwarding the message
           String forwardResponse = messageForwardToClient(recipient, message, hashSignature);
