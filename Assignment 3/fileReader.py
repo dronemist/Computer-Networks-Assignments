@@ -113,10 +113,10 @@ def plotCDF(name, X, xlabel, ylabel, xmin, xmax):
   print(mark)
   # Getting y as the CDF
   y = np.arange(1, len(x) + 1) / len(x)
-  # text(0.7, 0.9,'mean = ' + str(mean(x)), ha='center', va='center', transform=ax.transAxes,
-  # bbox={'facecolor': 'red', 'alpha': 0.5, 'pad': 5})
-  # text(0.7, 0.8,'median = ' + str(median(x)), ha='center', va='center', transform=ax.transAxes,
-  # bbox={'facecolor': 'red', 'alpha': 0.5, 'pad': 5})
+  text(0.7, 0.2,'mean = ' + str(mean(x)), ha='center', va='center', transform=ax.transAxes,
+  bbox={'facecolor': 'red', 'alpha': 0.5, 'pad': 5})
+  text(0.7, 0.1,'median = ' + str(median(x)), ha='center', va='center', transform=ax.transAxes,
+  bbox={'facecolor': 'red', 'alpha': 0.5, 'pad': 5})
   plt.axis([xmin, xmax, 0, 1])
   plt.plot(x, y, markevery = mark, marker = '*', markerfacecolor = 'green')
   plt.xlabel(xlabel)
@@ -278,7 +278,38 @@ def plotConnectionDurationCDF(name):
 
   # TODO: Everything obtained, plotting remaining
 
+def part11Plot(x, y, ylabel):
+  plt.plot(x, y)
+  plt.xlabel('lambda')
+  plt.ylabel(ylabel)
+  plt.margins(0.05)
+  plt.savefig(ylabel + '.png')
+  plt.title(ylabel + ' vs lambda')
+  # plt.show()
+  plt.close()
+
+def doPart11():
+  ''' For part 11'''
+  # Rate is average rate of all three
+  rate = (2.19 + 1.833 + 1.733) / 3 
+  meanOutGoingPacketLength = (91.6 + 91.086 + 91.4215) / 3
+  # Assuming packet length is in bits
+  mu = (128 * 1000 * 8) / meanOutGoingPacketLength
+  utilisationFactor = rate / mu
+  queueSize = (rate) / (mu - rate)
+  averageWaitingTime = (1/(mu - rate)) - (1 / mu)
+  print("Utilization Factor: " + str(utilisationFactor))
+  print("Average queue size: " + str(queueSize))
+  print("Average waiting time: " + str(averageWaitingTime))
+  x = np.arange(0, mu)
+  queueSizePlot = (x) / (mu - x)
+  part11Plot(x, queueSizePlot, 'Queue size')
+  waitingTimePlot = (1/(mu - x)) - (1 / mu)
+  part11Plot(x, waitingTimePlot, 'Waiting time')
+
+
 if __name__ == "__main__":
     traceFolderName = "Packet_traces"
     name = sys.argv[1]
     fileReader(traceFolderName + "/" + name + ".csv", name)
+    doPart11()
