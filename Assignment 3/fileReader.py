@@ -377,7 +377,7 @@ def doPart11():
   rate = (2.19 + 1.833 + 1.733) / 3 
   meanOutGoingPacketLength = (91.6 + 91.086 + 91.4215) / 3
   # Assuming packet length is in bits
-  mu = (128 * 1000 * 8) / meanOutGoingPacketLength
+  mu = (128 * 1000) / meanOutGoingPacketLength
   utilisationFactor = rate / mu
   queueSize = (rate) / (mu - rate)
   averageWaitingTime = (1/(mu - rate)) - (1 / mu)
