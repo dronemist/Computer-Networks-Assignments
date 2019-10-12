@@ -11,7 +11,7 @@ parsedPackets = []
 serverIPs = set()
 clientIPs = set()
 
-def plot_bar_x(label, TCPflows):
+def plot_bar_x(label, TCPflows, name):
   # this is for plotting purpose
   index = np.arange(len(label))
   TCPflowsInt = []
@@ -21,12 +21,12 @@ def plot_bar_x(label, TCPflows):
   plt.xlabel('Time of Day', fontsize=5)
   plt.ylabel('No of Connections', fontsize=5)
   plt.xticks(index, label, fontsize=5, rotation=30)
-  plt.savefig('Graphs/No_of_connections.png') 
+  plt.savefig('Graphs/'+ name +'/No_of_connections.png') 
   # plt.show()
 
 # NOTE: counted send and receive within the same TCP flow 
 
-def fileReader(fileName):
+def fileReader(fileName, name):
   TCPflows = set()
   TCPflowsForGraph = [set() for _ in range(24)]
   label = [i for i in range(24)]
@@ -77,13 +77,13 @@ def fileReader(fileName):
           if (float(timeOfPacketCapture) - startTime) >= (60 * 60):
             startTime += 60 * 60
           TCPflowsForGraph[int(startTime / (60 * 60))] = flow
-  plot_bar_x(label,TCPflowsForGraph)
-  plotConnectionDurationCDF()
+  plot_bar_x(label,TCPflowsForGraph, name)
+  plotConnectionDurationCDF(name)
   # print(len(serverIPs)) 
   # print(len(clientIPs))      
   # print(len(TCPflows))
 
-def plotScatterPlot(X, Y, xlabel, ylabel):
+def plotScatterPlot(name, X, Y, xlabel, ylabel):
   plt.scatter(X, Y, color= "green",  
             marker= "o", s=30)
   xmax = 2000
@@ -99,13 +99,13 @@ def plotScatterPlot(X, Y, xlabel, ylabel):
   # plot title 
   # plt.title() 
   plt.margins(0.1)
-  plt.savefig('Graphs/' + ylabel + '.png')
+  plt.savefig('Graphs/' + name + '/' + ylabel + '.png')
 
   # function to show the plot 
   # plt.show()           
 
 
-def plotCDF(X, xlabel, ylabel, xmin, xmax):
+def plotCDF(name, X, xlabel, ylabel, xmin, xmax):
   x = np.sort(X)
   f = figure()
   ax = f.add_subplot(111)
@@ -123,11 +123,11 @@ def plotCDF(X, xlabel, ylabel, xmin, xmax):
   plt.ylabel(ylabel)
   plt.margins(0.02)
   # Saving the plot
-  plt.savefig('Graphs/' + xlabel + '.png')  
+  plt.savefig('Graphs/' + name + '/' + xlabel + '.png')  
   # plt.show()
 
 
-def plotConnectionDurationCDF():
+def plotConnectionDurationCDF(name):
   global parsedPackets
   global serverIPs
   global clientIPs
@@ -244,31 +244,32 @@ def plotConnectionDurationCDF():
     bytesSentPlotData.append(TCPNumBytesSentOverConnection[flow])
     bytesReceivedPlotData.append(TCPNumBytesReceivedOverConnection[flow])
   '''plot for 4'''  
-  plotCDF(flowDurationPlotData, 'Duration of connection(in s)', 'cdf', 0, 1000)
+  plotCDF(name, flowDurationPlotData, 'Duration of connection(in s)', 'cdf', 0, 1000)
 
   '''plot for 5'''
-  plotScatterPlot(flowDurationPlotData, bytesSentPlotData, "Duration of connection", "Bytes sent",)
-  plotScatterPlot(bytesSentPlotData, bytesReceivedPlotData, "Bytes sent", "Bytes received")
+  plotScatterPlot(name, flowDurationPlotData, bytesSentPlotData, "Duration of connection", "Bytes sent",)
+  plotScatterPlot(name, bytesSentPlotData, bytesReceivedPlotData, "Bytes sent", "Bytes received")
 
   '''plot for 6'''
-  plotCDF(interArrivalOpeningTimeList, 'Inter arrival connection time(in s)', 'cdf', 0, 500)
+  plotCDF(name, interArrivalOpeningTimeList, 'Inter arrival connection time(in s)', 'cdf', 0, 500)
   
   '''plot for 7'''
-  plotCDF(interArrivalIncomingPacketToServerTimeList, 'Inter arrival time of incoming packets(in s)', 'cdf', 0, 10)
+  plotCDF(name, interArrivalIncomingPacketToServerTimeList, 'Inter arrival time of incoming packets(in s)', 'cdf', 0, 10)
   
   '''plot for 8'''
-  plotCDF(incomingPacketLengthList, 'Incoming packet length', 'cdf', 0, 120)
-  plotCDF(outgoingPacketLengthList, 'Outgoing packet length', 'cdf', 0, 200)
+  plotCDF(name, incomingPacketLengthList, 'Incoming packet length', 'cdf', 0, 120)
+  plotCDF(name, outgoingPacketLengthList, 'Outgoing packet length', 'cdf', 0, 200)
 
   '''for part 10'''
   # Connection inter arrival time
-  file = open("interArrivalConnection.csv", "w") 
+  file = open("R_csv's/" + name + "/interArrivalConnection.csv", "w") 
   file.write("X\n")
   for time in interArrivalOpeningTimeList:
     file.write(str(time) + '\n')
   file.close()
   # Packet inter arrival time
-  file = open("interArrivalPacket.csv", "w")
+  file = open("R_csv's/" + name + "/interArrivalPacket.csv", "w")
+  file.write("X\n")
   for time in interArrivalIncomingPacketToServerTimeList:
     file.write(str(time) + '\n')
   file.close()
@@ -277,4 +278,5 @@ def plotConnectionDurationCDF():
 
 if __name__ == "__main__":
     traceFolderName = "Packet_traces"
-    fileReader(traceFolderName + "/1.csv")
+    name = sys.argv[1]
+    fileReader(traceFolderName + "/" + name + ".csv", name)
