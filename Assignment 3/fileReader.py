@@ -3,6 +3,7 @@ import re
 import matplotlib.pyplot as plt
 import numpy as np
 from pylab import *
+import math
 
 # Packet represented as array of dictionaries
 parsedPackets = []
@@ -10,6 +11,25 @@ parsedPackets = []
 #Set of Server and client IPs, whether server or client recognised by seeing SYN packets
 serverIPs = set()
 clientIPs = set()
+
+
+def calculatePearsonCoefficient(x, y):
+  assert len(x) == len(y)
+  n = len(x)
+  assert n > 0
+  avg_x = mean(x)
+  avg_y = mean(y)
+  diffprod = 0
+  xdiff2 = 0
+  ydiff2 = 0
+  for idx in range(n):
+      xdiff = x[idx] - avg_x
+      ydiff = y[idx] - avg_y
+      diffprod += xdiff * ydiff
+      xdiff2 += xdiff * xdiff
+      ydiff2 += ydiff * ydiff
+
+  return diffprod / math.sqrt(xdiff2 * ydiff2)
 
 def plot_bar_x(label, TCPflows, name):
   # this is for plotting purpose
@@ -80,9 +100,9 @@ def fileReader(fileName, name, toAnalyseFlow):
           TCPflowsForGraph[int(startTime / (60 * 60))] = flow
   plot_bar_x(label,TCPflowsForGraph, name)
   plotConnectionDurationCDF(name, toAnalyseFlow)
-  # print(len(serverIPs)) 
-  # print(len(clientIPs))      
-  # print(len(TCPflows))
+  print(len(serverIPs)) 
+  print(len(clientIPs))      
+  print(len(TCPflows))
 
 def plotScatterPlot(name, X, Y, xlabel, ylabel, xmax = 2000, ymax = 2000):
   plt.scatter(X, Y, color= "green",  
@@ -277,6 +297,10 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
     bytesReceivedPlotData.append(TCPNumBytesReceivedOverConnection[flow])
   '''plot for 4'''  
   plotCDF(name, flowDurationPlotData, 'Duration of connection(in s)', 'cdf', 0, 1000)
+
+  print("Correlation Coefficients")
+  print(calculatePearsonCoefficient(flowDurationPlotData, bytesSentPlotData))
+  print(calculatePearsonCoefficient(bytesSentPlotData, bytesReceivedPlotData))
 
   '''plot for 5'''
   plotScatterPlot(name, flowDurationPlotData, bytesSentPlotData, "Duration of connection", "Bytes sent", 50, 1000)
