@@ -6,6 +6,4 @@ descdist(df$X)
 distributionpar(mfrow=c(2,2))
 fe <-fitdist(df$X, "exp")
 fe
-denscomp(list(fe), legendtext=c("exp"))
-cdfcomp(list(fe), legendtext=c("exp"))
-qqcomp(list(fe), legendtext=c("exp"))
+plot( fitdist(df$X, "exp") )
