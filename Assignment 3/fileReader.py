@@ -326,6 +326,10 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
     ACKTimeList = []
     ACKList = []
 
+    if sequenceNumberSendingTime.get(flowToAnalyseFormatted) is None:
+      print("Wrong flow number")
+      return
+
     for (sequenceNumber, time) in sequenceNumberSendingTime[flowToAnalyseFormatted]:
       sequenceNumberList.append(sequenceNumber)
       sequenceTimeList.append(time)
@@ -394,8 +398,11 @@ if __name__ == "__main__":
   name = sys.argv[1]
 
   # Whether user wants to see 9 part also
-  if sys.argv[2] == "Yes":
-    toAnalyseFlow = True
+  try:
+    if sys.argv[2] == "Yes":
+      toAnalyseFlow = True
+  except:
+    pass
 
   fileReader(traceFolderName + "/" + name + ".csv", name, toAnalyseFlow)
   doPart11()
