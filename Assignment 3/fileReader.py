@@ -83,7 +83,7 @@ def fileReader(fileName, name):
   # print(len(clientIPs))      
   # print(len(TCPflows))
 
-def plotScatterPlot(X, Y, xlabel, ylabel, xmax = 2000, xmin = 0, ymax = 2000, ymin = 0):
+def plotScatterPlot(name, X, Y, xlabel, ylabel, xmax = 2000, xmin = 0, ymax = 2000, ymin = 0):
   plt.scatter(X, Y, color= "green",  
             marker= "o", s=30)
 
@@ -246,7 +246,7 @@ def plotConnectionDurationCDF(name):
   plotCDF(name, flowDurationPlotData, 'Duration of connection(in s)', 'cdf', 0, 1000)
 
   '''plot for 5'''
-  plotScatterPlot(name, flowDurationPlotData, bytesSentPlotData, "Duration of connection", "Bytes sent",)
+  plotScatterPlot(name, flowDurationPlotData, bytesSentPlotData, "Duration of connection", "Bytes sent")
   plotScatterPlot(name, bytesSentPlotData, bytesReceivedPlotData, "Bytes sent", "Bytes received")
 
   '''plot for 6'''
