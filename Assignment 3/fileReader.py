@@ -22,6 +22,7 @@ def plot_bar_x(label, TCPflows, name):
   plt.ylabel('No of Connections', fontsize=5)
   plt.xticks(index, label, fontsize=5, rotation=30)
   plt.savefig('Graphs/'+ name +'/No_of_connections.png') 
+  plt.close()
   # plt.show()
 
 # NOTE: counted send and receive within the same TCP flow 
@@ -83,10 +84,11 @@ def fileReader(fileName, name):
   # print(len(clientIPs))      
   # print(len(TCPflows))
 
-def plotScatterPlot(name, X, Y, xlabel, ylabel, xmax = 2000, xmin = 0, ymax = 2000, ymin = 0):
+def plotScatterPlot(name, X, Y, xlabel, ylabel, xmax = 2000, ymax = 2000):
   plt.scatter(X, Y, color= "green",  
-            marker= "o", s=30)
-
+            marker= "o", s=10)
+  xmin = 0
+  ymin = 0
   # x-axis label 
   plt.xlabel(xlabel) 
   # frequency label 
@@ -97,6 +99,7 @@ def plotScatterPlot(name, X, Y, xlabel, ylabel, xmax = 2000, xmin = 0, ymax = 20
   # plt.title() 
   plt.margins(0.1)
   plt.savefig('Graphs/' + name + '/' + ylabel + '.png')
+  plt.close()
 
   # function to show the plot 
   # plt.show()           
@@ -121,6 +124,7 @@ def plotCDF(name, X, xlabel, ylabel, xmin, xmax):
   plt.margins(0.02)
   # Saving the plot
   plt.savefig('Graphs/' + name + '/' + xlabel + '.png')  
+  plt.close()
   # plt.show()
 
 
@@ -195,7 +199,6 @@ def plotConnectionDurationCDF(name):
       if "SYN" in subWords[3] and "ACK" not in subWords[4]:
         # Source is client and destination is server
 
-
         #Reset the connection
         TCPNumBytesSentOverConnection[flow] = 0
         TCPNumBytesReceivedOverConnection[flow] = 0  
@@ -246,8 +249,8 @@ def plotConnectionDurationCDF(name):
   plotCDF(name, flowDurationPlotData, 'Duration of connection(in s)', 'cdf', 0, 1000)
 
   '''plot for 5'''
-  plotScatterPlot(name, flowDurationPlotData, bytesSentPlotData, "Duration of connection", "Bytes sent")
-  plotScatterPlot(name, bytesSentPlotData, bytesReceivedPlotData, "Bytes sent", "Bytes received")
+  plotScatterPlot(name, flowDurationPlotData, bytesSentPlotData, "Duration of connection", "Bytes sent", 50, 1000)
+  plotScatterPlot(name, bytesSentPlotData, bytesReceivedPlotData, "Bytes sent", "Bytes received", 1000, 1000)
 
   '''plot for 6'''
   plotCDF(name, interArrivalOpeningTimeList, 'Inter arrival connection time(in s)', 'cdf', 0, 500)
