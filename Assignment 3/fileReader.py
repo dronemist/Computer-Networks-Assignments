@@ -27,7 +27,7 @@ def plot_bar_x(label, TCPflows, name):
 
 # NOTE: counted send and receive within the same TCP flow 
 
-def fileReader(fileName, name):
+def fileReader(fileName, name, toAnalyseFlow):
   TCPflows = set()
   TCPflowsForGraph = [set() for _ in range(24)]
   label = [i for i in range(24)]
@@ -79,7 +79,7 @@ def fileReader(fileName, name):
             startTime += 60 * 60
           TCPflowsForGraph[int(startTime / (60 * 60))] = flow
   plot_bar_x(label,TCPflowsForGraph, name)
-  plotConnectionDurationCDF(name)
+  plotConnectionDurationCDF(name, toAnalyseFlow)
   # print(len(serverIPs)) 
   # print(len(clientIPs))      
   # print(len(TCPflows))
@@ -128,7 +128,7 @@ def plotCDF(name, X, xlabel, ylabel, xmin, xmax):
   # plt.show()
 
 
-def plotConnectionDurationCDF(name):
+def plotConnectionDurationCDF(name, toAnalyseFlow):
   global parsedPackets
   global serverIPs
   global clientIPs
@@ -165,6 +165,13 @@ def plotConnectionDurationCDF(name):
   # List of outgoing packet lengths to client
   outgoingPacketLengthList = []
 
+  ''' For part 9 '''
+  #Dictionary of (flow name, (sequence number, time)) for packets sent by server
+  sequenceNumberSendingTime = {}
+  #Dictionary of (flow name, (acknowledgment number, time)) for packets ACKed by client
+  sequenceNumberACKedTime = {}
+
+
   for parsedPacket in parsedPackets:
     # print(parsedPacket)
     
@@ -195,6 +202,8 @@ def plotConnectionDurationCDF(name):
       destinationPort = subWords[2]
       flow = sourceIP + " " + sourcePort + " " + destinationIP + " " + destinationPort
       reverseFlow = destinationIP + " " + destinationPort + " " + sourceIP + " " + sourcePort
+      sequenceNumberAttribute = "Seq="
+      ACKNumberAttribute = "Ack="
 
       if "SYN" in subWords[3] and "ACK" not in subWords[4]:
         # Source is client and destination is server
@@ -229,10 +238,27 @@ def plotConnectionDurationCDF(name):
       if flowStartTime is not None:
         # Means packet sent from client to server
         TCPNumBytesSentOverConnection[flow] = TCPNumBytesSentOverConnection[flow] + packetLength
+        for attribute in subWords:
+          ACKAttributePosition = attribute.find(sequenceNumberAttribute)
+          if ACKAttributePosition != -1:
+            ACKNumberString = attribute[len(ACKNumberAttribute) :] 
+            if sequenceNumberACKedTime.get(flow) is not None:
+              sequenceNumberACKedTime[flow].append( (int(ACKNumberString), float(timeOfCurrentPacketCapture)) )
+            else:
+              sequenceNumberACKedTime[flow] = []
+
 
       if reverseFlowStartTime is not None:
         # Means packet sent from server to client
         TCPNumBytesReceivedOverConnection[reverseFlow] = TCPNumBytesReceivedOverConnection[reverseFlow] + packetLength
+        for attribute in subWords:
+          sequenceAttributePosition = attribute.find(sequenceNumberAttribute)
+          if sequenceAttributePosition != -1:
+            sequenceNumberString = attribute[len(sequenceNumberAttribute) :] 
+            if sequenceNumberSendingTime.get(reverseFlow) is not None:
+              sequenceNumberSendingTime[reverseFlow].append( (int(sequenceNumberString), float(timeOfCurrentPacketCapture)) )
+            else:
+              sequenceNumberSendingTime[reverseFlow] = []
 
   # For plotting CDF of connection time and bytes sent      
   maxConnectionDuration = 0
@@ -278,7 +304,36 @@ def plotConnectionDurationCDF(name):
 
   # TODO: Everything obtained, plotting remaining
 
+  # PART 9
+  if toAnalyseFlow:
+    print("Enter the flow you want to analyse in order: source IP destination IP source port destination port")
+
+    flowToAnalyse = input()
+    flowToAnalyseParameters = flowToAnalyse.split(" ")
+    serverIP = flowToAnalyseParameters[0]
+    clientIP = flowToAnalyseParameters[1]
+    serverPort = flowToAnalyseParameters[2]
+    clientPort = flowToAnalyseParameters[3]
+
+    flowToAnalyseFormatted = serverIP + " " + serverPort + " " + clientIP + " " + clientPort
+
+    # for (sequenceNumber, time) in sequenceNumberSendingTime[flowToAnalyseFormatted]:
+
+
+
+
+
+
+
+
 if __name__ == "__main__":
-    traceFolderName = "Packet_traces"
-    name = sys.argv[1]
-    fileReader(traceFolderName + "/" + name + ".csv", name)
+  traceFolderName = "Packet_traces"
+  toAnalyseFlow = False
+
+  name = sys.argv[1]
+
+  # Whether user wants to see 9 part also
+  if sys.argv[2] == "Yes":
+    toAnalyseFlow = True
+
+  fileReader(traceFolderName + "/" + name + ".csv", name, toAnalyseFlow)
