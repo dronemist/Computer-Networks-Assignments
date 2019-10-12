@@ -220,6 +220,10 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
         interArrivalOpeningTimeList.append(currentSYNInterArrivalTime)
         mostRecentSYNPacketArrivalTime = currentArrivalTime
 
+        #Initialising sequence numbers
+        sequenceNumberACKedTime[flow] = []
+        sequenceNumberSendingTime[flow] = []
+
       if "FIN" in subWords[3] or "RST" in subWords[3]:
         flowStartTime = TCPFlowsStartedInTime.get(flow)
         reverseFlowStartTime = TCPFlowsStartedInTime.get(reverseFlow)
@@ -239,7 +243,7 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
         # Means packet sent from client to server
         TCPNumBytesSentOverConnection[flow] = TCPNumBytesSentOverConnection[flow] + packetLength
         for attribute in subWords:
-          ACKAttributePosition = attribute.find(sequenceNumberAttribute)
+          ACKAttributePosition = attribute.find(ACKNumberAttribute)
           if ACKAttributePosition != -1:
             ACKNumberString = attribute[len(ACKNumberAttribute) :] 
             if sequenceNumberACKedTime.get(flow) is not None:
@@ -315,9 +319,42 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
     serverPort = flowToAnalyseParameters[2]
     clientPort = flowToAnalyseParameters[3]
 
-    flowToAnalyseFormatted = serverIP + " " + serverPort + " " + clientIP + " " + clientPort
+    flowToAnalyseFormatted = clientIP + " " + clientPort + " " + serverIP + " " + serverPort
 
-    # for (sequenceNumber, time) in sequenceNumberSendingTime[flowToAnalyseFormatted]:
+    sequenceTimeList = []
+    sequenceNumberList = []
+    ACKTimeList = []
+    ACKList = []
+
+    for (sequenceNumber, time) in sequenceNumberSendingTime[flowToAnalyseFormatted]:
+      sequenceNumberList.append(sequenceNumber)
+      sequenceTimeList.append(time)
+
+    for (ACKNumber, time) in sequenceNumberACKedTime[flowToAnalyseFormatted]:
+      ACKList.append(ACKNumber)
+      ACKTimeList.append(time)
+
+    plt.scatter(sequenceTimeList, sequenceNumberList, color= "red",  
+                marker= "o", s=10)
+    plt.scatter(ACKTimeList, ACKList, color= "green",  
+                marker= "o", s=10)
+    xmin = min(sequenceTimeList + ACKTimeList)
+    ymin = min(sequenceNumberList + ACKList) - 100
+    # x-axis label 
+    plt.xlabel("Time") 
+    # frequency label 
+    plt.ylabel("SequenceNumber")
+    # zooming in on the graph
+    plt.gca().set_xlim(left=xmin)
+    plt.gca().set_ylim(bottom=ymin) 
+    # plot title 
+    # plt.title() 
+    plt.margins(0.1)
+    # plt.savefig('Graphs/' + name + '/' + ylabel + '.png')
+    # plt.close()
+
+    # function to show the plot 
+    plt.show()           
 
   
 def part11Plot(x, y, ylabel):
