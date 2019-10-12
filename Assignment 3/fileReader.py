@@ -79,8 +79,8 @@ def fileReader(fileName, name):
           TCPflowsForGraph[int(startTime / (60 * 60))] = flow
   plot_bar_x(label,TCPflowsForGraph, name)
   plotConnectionDurationCDF(name)
-  # print(len(serverIPs)) 
-  # print(len(clientIPs))      
+  print(len(serverIPs)) 
+  print(len(clientIPs))      
   # print(len(TCPflows))
 
 def plotScatterPlot(name, X, Y, xlabel, ylabel):
@@ -180,7 +180,7 @@ def plotConnectionDurationCDF(name):
       interArrivalIncomingPacketToServerTimeList.append(currentServerPacketInterArrivalTime)
       mostRecentServerPacketArrivalTime = currentArrivalTime
 
-      #Updating incoming packet length list
+      # Updating incoming packet length list
       incomingPacketLengthList.append(packetLength)
 
     # if packet is outgoing to client
@@ -247,7 +247,7 @@ def plotConnectionDurationCDF(name):
   plotCDF(name, flowDurationPlotData, 'Duration of connection(in s)', 'cdf', 0, 1000)
 
   '''plot for 5'''
-  plotScatterPlot(name, flowDurationPlotData, bytesSentPlotData, "Duration of connection", "Bytes sent",)
+  plotScatterPlot(name, flowDurationPlotData, bytesSentPlotData, "Duration of connection", "Bytes sent")
   plotScatterPlot(name, bytesSentPlotData, bytesReceivedPlotData, "Bytes sent", "Bytes received")
 
   '''plot for 6'''
