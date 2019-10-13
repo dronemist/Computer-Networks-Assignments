@@ -315,6 +315,7 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
   plotCDF(name, interArrivalIncomingPacketToServerTimeList, 'Inter arrival time of incoming packets(in s)', 'cdf', 0, 10, False)
   print('Max packet inter arrival: ' + str(max(interArrivalIncomingPacketToServerTimeList)))
   print('Min packet inter arrival: ' + str(min(interArrivalIncomingPacketToServerTimeList)))
+  print('Mean: ' + str(mean(interArrivalIncomingPacketToServerTimeList)))
   
   '''plot for 8'''
   plotCDF(name, incomingPacketLengthList, 'Incoming packet length', 'cdf', 0, 120)
@@ -402,11 +403,12 @@ def part11Plot(x, y, ylabel):
 def doPart11():
   ''' For part 11'''
   # Rate is average rate of all three
-  rate = (2.21 + 1.894 + 1.74) / 3 
-  meanOutGoingPacketLength = (91.6 + 91.086 + 91.4215) / 3
+  rate = (0.882 + 1.05 + 0.85) / 3 
+  print("rate: " + str(rate))
+  meanOutGoingPacketLength = (57.25 + 56.609 + 58.086) / 3
   # Assuming packet length is in bits
   mu = (128 * 1000) / (meanOutGoingPacketLength * 8)
-  print(mu)
+  print("mu: " + str(mu))
   utilisationFactor = rate / mu
   queueSize = (rate) / (mu - rate)
   averageWaitingTime = (1/(mu - rate)) - (1 / mu)
