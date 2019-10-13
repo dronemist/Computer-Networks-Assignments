@@ -170,7 +170,7 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
   ''' For part 6 '''
   # List of floats containing list of inter arrival times of SYN packets for new connections 
   interArrivalOpeningTimeList = []
-  #Arrival Time of most recent SYN packet
+  # Arrival Time of most recent SYN packet
   mostRecentSYNPacketArrivalTime = 0
 
   ''' For part 7 '''
@@ -401,10 +401,11 @@ def part11Plot(x, y, ylabel):
 def doPart11():
   ''' For part 11'''
   # Rate is average rate of all three
-  rate = (2.19 + 1.833 + 1.733) / 3 
+  rate = (2.21 + 1.894 + 1.74) / 3 
   meanOutGoingPacketLength = (91.6 + 91.086 + 91.4215) / 3
   # Assuming packet length is in bits
-  mu = (128 * 1000) / meanOutGoingPacketLength
+  mu = (128 * 1000) / (meanOutGoingPacketLength * 8)
+  print(mu)
   utilisationFactor = rate / mu
   queueSize = (rate) / (mu - rate)
   averageWaitingTime = (1/(mu - rate)) - (1 / mu)
