@@ -344,42 +344,68 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
 
   # TODO: Everything obtained, plotting remaining
 
+
+
   # PART 9
   if toAnalyseFlow:
-    print("Enter the flow you want to analyse in order: source IP destination IP source port destination port")
+    # print("Enter the flow you want to analyse in order: source IP destination IP source port destination port")
+    mostDataIntensiveFlow = ""
+    mostDataIntensiveFlowValue = 0
+    mostDataIntensiveFlowACKList = []
+    mostDataIntensiveFlowACKTimeList = []
+    mostDataIntensiveFlowSequenceNumberList =[]
+    mostDataIntensiveFlowSequenceTimeList = []
 
-    flowToAnalyse = input()
-    flowToAnalyseParameters = flowToAnalyse.split(" ")
-    serverIP = flowToAnalyseParameters[0]
-    clientIP = flowToAnalyseParameters[1]
-    serverPort = flowToAnalyseParameters[2]
-    clientPort = flowToAnalyseParameters[3]
+    mostRetransmissionsFlow = ""
+    mostRetransmissionsFlowValue = 0
+    mostRetransmissionsFlowACKList = []
+    mostRetransmissionsFlowACKTimeList = []
+    mostRetransmissionsFlowSequenceNumberList =[]
+    mostRetransmissionsFlowSequenceTimeList = []
 
-    flowToAnalyseFormatted = clientIP + " " + clientPort + " " + serverIP + " " + serverPort
+    for (flowToAnalyse) in sequenceNumberSendingTime.keys():
+      # flowToAnalyse = flow
+      flowToAnalyseParameters = flowToAnalyse.split(" ")
+      serverIP = flowToAnalyseParameters[0]
+      clientIP = flowToAnalyseParameters[1]
+      serverPort = flowToAnalyseParameters[2]
+      clientPort = flowToAnalyseParameters[3]
 
-    sequenceTimeList = []
-    sequenceNumberList = []
-    ACKTimeList = []
-    ACKList = []
+      # flowToAnalyseFormatted = clientIP + " " + clientPort + " " + serverIP + " " + serverPort
 
-    if sequenceNumberSendingTime.get(flowToAnalyseFormatted) is None:
-      print("Wrong flow number")
-      return
+      sequenceTimeList = []
+      sequenceNumberList = []
+      ACKTimeList = []
+      ACKList = []
 
-    for (sequenceNumber, time) in sequenceNumberSendingTime[flowToAnalyseFormatted]:
-      sequenceNumberList.append(sequenceNumber)
-      sequenceTimeList.append(time)
+      if sequenceNumberSendingTime.get(flowToAnalyse) is None:
+        print("Wrong flow number")
+        return
 
-    for (ACKNumber, time) in sequenceNumberACKedTime[flowToAnalyseFormatted]:
-      ACKList.append(ACKNumber)
-      ACKTimeList.append(time)
+      for (sequenceNumber, time) in sequenceNumberSendingTime[flowToAnalyse]:
+        sequenceNumberList.append(sequenceNumber)
+        sequenceTimeList.append(time)
 
-    plt.scatter(sequenceTimeList, sequenceNumberList, color= "red",  
+      for (ACKNumber, time) in sequenceNumberACKedTime[flowToAnalyse]:
+        ACKList.append(ACKNumber)
+        ACKTimeList.append(time)
+
+      temp = len(sequenceNumberList + ACKList) 
+      if temp > mostDataIntensiveFlowValue:
+        mostDataIntensiveFlow = flowToAnalyse
+        mostDataIntensiveFlowValue = temp
+        mostDataIntensiveFlowACKList = ACKList
+        mostDataIntensiveFlowACKTimeList = ACKTimeList
+        mostDataIntensiveFlowSequenceNumberList = sequenceNumberList
+        mostDataIntensiveFlowSequenceTimeList = sequenceTimeList
+
+    plt.scatter(mostDataIntensiveFlowSequenceTimeList, mostDataIntensiveFlowSequenceNumberList, color= "red",  
                 marker= "o", s=10)
-    plt.scatter(ACKTimeList, ACKList, color= "green",  
-                marker= "o", s=10)
-    xmin = min(sequenceTimeList + ACKTimeList)
-    ymin = min(sequenceNumberList + ACKList) - 100
+    plt.scatter(mostDataIntensiveFlowACKTimeList, mostDataIntensiveFlowACKList, color= "green",  
+                marker= "x", s=1)
+    xmin = min(mostDataIntensiveFlowSequenceTimeList + mostDataIntensiveFlowACKTimeList)
+    ymin = min(mostDataIntensiveFlowSequenceNumberList + mostDataIntensiveFlowACKList) - 100
+    print('Most data intensive flow: ' + mostDataIntensiveFlow)
     # x-axis label 
     plt.xlabel("Time") 
     # frequency label 
@@ -397,6 +423,9 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
     plt.show()           
 
   
+
+
+
 def part11Plot(x, y, ylabel):
   plt.plot(x, y)
   plt.xlabel('lambda')
