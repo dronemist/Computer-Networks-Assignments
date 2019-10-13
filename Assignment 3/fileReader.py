@@ -372,6 +372,23 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
     mostRetransmissionsFlowSequenceTimeList = []
     mostRetransmissionsFlowCutoffTransmissions = 100
 
+    spuriousRetransmissionsFlow = ""
+    spuriousRetransmissionsFlowValue = 0
+    spuriousRetransmissionsFlowACKList = []
+    spuriousRetransmissionsFlowACKTimeList = []
+    spuriousRetransmissionsFlowSequenceNumberList =[]
+    spuriousRetransmissionsFlowSequenceTimeList = []
+    spuriousRetransmissionsFlowCutoffTransmissions = 100
+
+    duplicateACKFlow = ""
+    duplicateACKFlowValue = 0
+    duplicateACKFlowACKList = []
+    duplicateACKFlowACKTimeList = []
+    duplicateACKFlowSequenceNumberList =[]
+    duplicateACKFlowSequenceTimeList = []
+    duplicateACKFlowCutoffTransmissions = 100
+
+
 
     for (flowToAnalyse) in sequenceNumberSendingTime.keys():
       # flowToAnalyse = flow
@@ -382,6 +399,7 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
       clientPort = flowToAnalyseParameters[3]
 
       numberOfRetransmissions = 0
+      numberOfSpuriousRetransmissions = 0
 
       # flowToAnalyseFormatted = clientIP + " " + clientPort + " " + serverIP + " " + serverPort
 
@@ -393,6 +411,9 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
       if sequenceNumberSendingTime.get(flowToAnalyse) is None:
         print("Wrong flow number")
         return
+
+      sequenceNumberTimeTupleList = sequenceNumberSendingTime[flowToAnalyse]
+      ACKNumberTimeTupleList = sequenceNumberACKedTime[flowToAnalyse]
 
       for (sequenceNumber, time) in sequenceNumberSendingTime[flowToAnalyse]:
         try:
@@ -407,6 +428,20 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
       for (ACKNumber, time) in sequenceNumberACKedTime[flowToAnalyse]:
         ACKList.append(ACKNumber)
         ACKTimeList.append(time)
+
+      for i in range(0, len(sequenceNumberTimeTupleList)):
+        (sequenceNumber, time) = sequenceNumberTimeTupleList[i]
+        j = 0
+        while j < len(ACKNumberTimeTupleList) and (ACKNumberTimeTupleList[j])[1] < time:
+          if sequenceNumberTimeTupleList[0] < ACKNumberTimeTupleList[0]:
+            numberOfSpuriousRetransmissions += 1
+            break
+          j += 1
+
+
+
+
+
 
       numTotalPackets = len(sequenceNumberList + ACKList) 
       if numTotalPackets > mostDataIntensiveFlowValue:
@@ -425,21 +460,36 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
         mostRetransmissionsFlowSequenceNumberList = sequenceNumberList
         mostRetransmissionsFlowSequenceTimeList = sequenceTimeList
 
+      if numberOfSpuriousRetransmissions > spuriousRetransmissionsFlowValue and numTotalPackets < spuriousRetransmissionsFlowCutoffTransmissions:
+        spuriousRetransmissionsFlow = flowToAnalyse
+        spuriousRetransmissionsFlowValue = numberOfSpuriousRetransmissions
+        spuriousRetransmissionsFlowACKList = ACKList
+        spuriousRetransmissionsFlowACKTimeList = ACKTimeList
+        spuriousRetransmissionsFlowSequenceNumberList = sequenceNumberList
+        spuriousRetransmissionsFlowSequenceTimeList = sequenceTimeList
+
 
     # plt.scatter(mostDataIntensiveFlowSequenceTimeList, mostDataIntensiveFlowSequenceNumberList, color= "red",  
     #             marker= "o", s=10)
     # plt.scatter(mostDataIntensiveFlowACKTimeList, mostDataIntensiveFlowACKList, color= "green",  
     #             marker= "x", s=1)
-    plt.scatter(mostRetransmissionsFlowSequenceTimeList, mostRetransmissionsFlowSequenceNumberList, color= "red",  
+    # plt.scatter(mostRetransmissionsFlowSequenceTimeList, mostRetransmissionsFlowSequenceNumberList, color= "red",  
+    #             marker= "o", s=10)
+    # plt.scatter(mostRetransmissionsFlowACKTimeList, mostRetransmissionsFlowACKList, color= "green",  
+    #             marker= "x", s=1)
+    plt.scatter(spuriousRetransmissionsFlowSequenceTimeList, spuriousRetransmissionsFlowSequenceNumberList, color= "red",  
                 marker= "o", s=10)
-    plt.scatter(mostRetransmissionsFlowACKTimeList, mostRetransmissionsFlowACKList, color= "green",  
+    plt.scatter(spuriousRetransmissionsFlowACKTimeList, spuriousRetransmissionsFlowACKList, color= "green",  
                 marker= "x", s=1)
     # xmin = min(mostDataIntensiveFlowSequenceTimeList + mostDataIntensiveFlowACKTimeList)
     # ymin = min(mostDataIntensiveFlowSequenceNumberList + mostDataIntensiveFlowACKList) - 100
-    xmin = min(mostRetransmissionsFlowSequenceTimeList + mostRetransmissionsFlowACKTimeList)
-    ymin = min(mostRetransmissionsFlowSequenceNumberList + mostRetransmissionsFlowACKList) - 100
+    # xmin = min(mostRetransmissionsFlowSequenceTimeList + mostRetransmissionsFlowACKTimeList)
+    # ymin = min(mostRetransmissionsFlowSequenceNumberList + mostRetransmissionsFlowACKList) - 100
+    xmin = min(spuriousRetransmissionsFlowSequenceTimeList + spuriousRetransmissionsFlowACKTimeList)
+    ymin = min(spuriousRetransmissionsFlowSequenceNumberList + spuriousRetransmissionsFlowACKList) - 100
     print('Most data intensive flow: ' + mostDataIntensiveFlow)
     print('Most retransmitting flow: ' + mostRetransmissionsFlow)
+    print('Most spurious retransmitting flow: ' + spuriousRetransmissionsFlow)
     # x-axis label 
     plt.xlabel("Time") 
     # frequency label 
