@@ -36,7 +36,8 @@ def plot_bar_x(label, TCPflows, name):
   index = np.arange(len(label))
   TCPflowsInt = []
   for flow in TCPflows:
-    TCPflowsInt.append(len(flow))
+    TCPflowsInt.append(flow)
+    # print(len(flow))
   plt.bar(index, TCPflowsInt)
   plt.xlabel('Time of Day', fontsize=5)
   plt.ylabel('No of Connections', fontsize=5)
@@ -49,7 +50,8 @@ def plot_bar_x(label, TCPflows, name):
 
 def fileReader(fileName, name, toAnalyseFlow):
   TCPflows = set()
-  TCPflowsForGraph = [set() for _ in range(24)]
+  TCPflowsPending = set()
+  TCPflowsForGraph = [0 for _ in range(24)]
   label = [i for i in range(24)]
   # startTime denotes the time at which hour starts
   startTime = 0.0
@@ -88,17 +90,23 @@ def fileReader(fileName, name, toAnalyseFlow):
         subWords = info.split()
         sourcePort = subWords[0]
         destinationPort = subWords[2]
+        flow = sourceIP + sourcePort + destinationIP + destinationPort
+        reverseFlow = destinationIP + destinationPort + sourceIP + sourcePort
         # If it is a SYN packet
         if "SYN" in subWords[3] and "ACK" not in subWords[4]:
           serverIPs.add(destinationIP)
-          clientIPs.add(sourceIP)
-          # counting a TCP flow only from the SYN packet
-          flow = sourceIP + sourcePort + destinationIP + destinationPort
+          clientIPs.add(sourceIP)         
           TCPflows.add(flow)
-          if (float(timeOfPacketCapture) - startTime) >= (60 * 60):
-            startTime += 60 * 60
-          TCPflowsForGraph[int(startTime / (60 * 60))] = flow
+          TCPflowsPending.add(flow)
+        
+        if "ACK" in subWords[3]:
+          if {flow}.issubset(TCPflowsPending):
+            if (float(timeOfPacketCapture) - startTime) >= (60 * 60):
+              startTime += 60 * 60
+            TCPflowsForGraph[int((float)(startTime) / (float)(60 * 60))] += 1
+            TCPflowsPending.remove(flow)
   plot_bar_x(label,TCPflowsForGraph, name)
+  # print(TCPflowsForGraph)
   plotConnectionDurationCDF(name, toAnalyseFlow)
   print('Number of server Ip\'s: ' + str(len(serverIPs))) 
   print('Number of client Ip\'s: ' + str(len(clientIPs)))      
