@@ -125,7 +125,7 @@ def plotScatterPlot(name, X, Y, xlabel, ylabel, xmax = 2000, ymax = 2000):
   # plt.show()           
 
 
-def plotCDF(name, X, xlabel, ylabel, xmin, xmax):
+def plotCDF(name, X, xlabel, ylabel, xmin, xmax, isBounded = True):
   x = np.sort(X)
   f = figure()
   ax = f.add_subplot(111)
@@ -137,8 +137,9 @@ def plotCDF(name, X, xlabel, ylabel, xmin, xmax):
   bbox={'facecolor': 'red', 'alpha': 0.5, 'pad': 5})
   text(0.7, 0.1,'median = ' + str(median(x)), ha='center', va='center', transform=ax.transAxes,
   bbox={'facecolor': 'red', 'alpha': 0.5, 'pad': 5})
-  plt.axis([xmin, xmax, 0, 1])
-  plt.plot(x, y, markevery = mark, marker = '*', markerfacecolor = 'green')
+  if isBounded:
+    plt.axis([xmin, xmax, 0, 1])
+  plt.plot(x, y)
   plt.xlabel(xlabel)
   plt.ylabel(ylabel)
   plt.margins(0.02)
@@ -307,10 +308,10 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
   plotScatterPlot(name, bytesSentPlotData, bytesReceivedPlotData, "Bytes sent", "Bytes received", 1000, 1000)
 
   '''plot for 6'''
-  plotCDF(name, interArrivalOpeningTimeList, 'Inter arrival connection time(in s)', 'cdf', 0, 500)
+  plotCDF(name, interArrivalOpeningTimeList, 'Inter arrival connection time(in s)', 'cdf', 0, 500, False)
   
   '''plot for 7'''
-  plotCDF(name, interArrivalIncomingPacketToServerTimeList, 'Inter arrival time of incoming packets(in s)', 'cdf', 0, 10)
+  plotCDF(name, interArrivalIncomingPacketToServerTimeList, 'Inter arrival time of incoming packets(in s)', 'cdf', 0, 10, False)
   
   '''plot for 8'''
   plotCDF(name, incomingPacketLengthList, 'Incoming packet length', 'cdf', 0, 120)
