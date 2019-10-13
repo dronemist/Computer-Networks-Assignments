@@ -100,9 +100,9 @@ def fileReader(fileName, name, toAnalyseFlow):
           TCPflowsForGraph[int(startTime / (60 * 60))] = flow
   plot_bar_x(label,TCPflowsForGraph, name)
   plotConnectionDurationCDF(name, toAnalyseFlow)
-  print(len(serverIPs)) 
-  print(len(clientIPs))      
-  print(len(TCPflows))
+  print('Number of server Ip\'s: ' + str(len(serverIPs))) 
+  print('Number of client Ip\'s: ' + str(len(clientIPs)))      
+  print('Number of distinct TCP flows: ' + str(len(TCPflows)))
 
 def plotScatterPlot(name, X, Y, xlabel, ylabel, xmax = 2000, ymax = 2000):
   plt.scatter(X, Y, color= "green",  
@@ -130,7 +130,6 @@ def plotCDF(name, X, xlabel, ylabel, xmin, xmax, isBounded = True):
   f = figure()
   ax = f.add_subplot(111)
   mark = mean(x)
-  print(mark)
   # Getting y as the CDF
   y = np.arange(1, len(x) + 1) / len(x)
   text(0.7, 0.2,'mean = ' + str(mean(x)), ha='center', va='center', transform=ax.transAxes,
@@ -211,7 +210,6 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
 
       # Updating incoming packet length list
       incomingPacketLengthList.append(packetLength)
-
     # if packet is outgoing to client
     if {destinationIP}.issubset(clientIPs):
       #Updating outgoing packet length list
@@ -290,12 +288,12 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
   flowDurationPlotData = []
   bytesSentPlotData = []
   bytesReceivedPlotData = []
-
+  print(median(incomingPacketLengthList))
   for (flow, flowDuration) in TCPFlowConnectionDuration.items():
     maxConnectionDuration = max(maxConnectionDuration, flowDuration)
     flowDurationPlotData.append(flowDuration)
     bytesSentPlotData.append(TCPNumBytesSentOverConnection[flow])
-    bytesReceivedPlotData.append(TCPNumBytesReceivedOverConnection[flow])
+    bytesReceivedPlotData.append(TCPNumBytesReceivedOverConnection[flow])  
   '''plot for 4'''  
   plotCDF(name, flowDurationPlotData, 'Duration of connection(in s)', 'cdf', 0, 1000)
 
@@ -309,9 +307,13 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
 
   '''plot for 6'''
   plotCDF(name, interArrivalOpeningTimeList, 'Inter arrival connection time(in s)', 'cdf', 0, 500, False)
-  
+  print('Max connection inter arrival: ' + str(max(interArrivalOpeningTimeList)))
+  print('Min connection inter arrival: ' + str(min(interArrivalOpeningTimeList)))
+
   '''plot for 7'''
   plotCDF(name, interArrivalIncomingPacketToServerTimeList, 'Inter arrival time of incoming packets(in s)', 'cdf', 0, 10, False)
+  print('Max packet inter arrival: ' + str(max(interArrivalIncomingPacketToServerTimeList)))
+  print('Min packet inter arrival: ' + str(min(interArrivalIncomingPacketToServerTimeList)))
   
   '''plot for 8'''
   plotCDF(name, incomingPacketLengthList, 'Incoming packet length', 'cdf', 0, 120)
