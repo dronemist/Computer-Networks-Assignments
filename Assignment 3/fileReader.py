@@ -112,7 +112,7 @@ def fileReader(fileName, name, toAnalyseFlow):
   print('Number of client Ip\'s: ' + str(len(clientIPs)))      
   print('Number of distinct TCP flows: ' + str(len(TCPflows)))
 
-def plotScatterPlot(name, X, Y, xlabel, ylabel, xmax = 2000, ymax = 2000):
+def plotScatterPlot(name, X, Y, xlabel, ylabel, xmax = 2000, ymax = 2000, isBounded = True):
   plt.scatter(X, Y, color= "green",  
             marker= "o", s=10)
   xmin = 0
@@ -122,7 +122,8 @@ def plotScatterPlot(name, X, Y, xlabel, ylabel, xmax = 2000, ymax = 2000):
   # frequency label 
   plt.ylabel(ylabel)
   # zooming in on the graph
-  plt.axis([xmin, xmax, ymin, ymax]) 
+  if(isBounded):
+    plt.axis([xmin, xmax, ymin, ymax]) 
   # plot title 
   # plt.title() 
   plt.margins(0.1)
@@ -178,7 +179,7 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
   ''' For part 6 '''
   # List of floats containing list of inter arrival times of SYN packets for new connections 
   interArrivalOpeningTimeList = []
-  #Arrival Time of most recent SYN packet
+  # Arrival Time of most recent SYN packet
   mostRecentSYNPacketArrivalTime = 0
 
   ''' For part 7 '''
@@ -297,7 +298,6 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
   flowDurationPlotData = []
   bytesSentPlotData = []
   bytesReceivedPlotData = []
-  print(median(incomingPacketLengthList))
   for (flow, flowDuration) in TCPFlowConnectionDuration.items():
     maxConnectionDuration = max(maxConnectionDuration, flowDuration)
     flowDurationPlotData.append(flowDuration)
@@ -306,6 +306,13 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
   '''plot for 4'''  
   plotCDF(name, flowDurationPlotData, 'Duration of connection(in s)', 'cdf', 0, 1000)
 
+  # temp1 = []
+  # temp2 = []
+  # for (i,bytes) in enumerate(bytesReceivedPlotData):
+  #   if(bytes < 1000 and bytesSentPlotData[i] < 1000):
+  #     temp1.append(bytes)
+  #     temp2.append(bytesSentPlotData[i])
+      
   print("Correlation Coefficients")
   print(calculatePearsonCoefficient(flowDurationPlotData, bytesSentPlotData))
   print(calculatePearsonCoefficient(bytesSentPlotData, bytesReceivedPlotData))
@@ -323,6 +330,7 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
   plotCDF(name, interArrivalIncomingPacketToServerTimeList, 'Inter arrival time of incoming packets(in s)', 'cdf', 0, 10, False)
   print('Max packet inter arrival: ' + str(max(interArrivalIncomingPacketToServerTimeList)))
   print('Min packet inter arrival: ' + str(min(interArrivalIncomingPacketToServerTimeList)))
+  print('Mean: ' + str(mean(interArrivalIncomingPacketToServerTimeList)))
   
   '''plot for 8'''
   plotCDF(name, incomingPacketLengthList, 'Incoming packet length', 'cdf', 0, 120)
@@ -465,10 +473,12 @@ def part11Plot(x, y, ylabel):
 def doPart11():
   ''' For part 11'''
   # Rate is average rate of all three
-  rate = (2.19 + 1.833 + 1.733) / 3 
-  meanOutGoingPacketLength = (91.6 + 91.086 + 91.4215) / 3
+  rate = (0.882 + 1.05 + 0.85) / 3 
+  print("rate: " + str(rate))
+  meanOutGoingPacketLength = (57.25 + 56.609 + 58.086) / 3
   # Assuming packet length is in bits
-  mu = (128 * 1000) / meanOutGoingPacketLength
+  mu = (128 * 1000) / (meanOutGoingPacketLength * 8)
+  print("mu: " + str(mu))
   utilisationFactor = rate / mu
   queueSize = (rate) / (mu - rate)
   averageWaitingTime = (1/(mu - rate)) - (1 / mu)
