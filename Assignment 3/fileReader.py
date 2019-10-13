@@ -380,14 +380,6 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
     spuriousRetransmissionsFlowSequenceTimeList = []
     spuriousRetransmissionsFlowCutoffTransmissions = 100
 
-    duplicateACKFlow = ""
-    duplicateACKFlowValue = 0
-    duplicateACKFlowACKList = []
-    duplicateACKFlowACKTimeList = []
-    duplicateACKFlowSequenceNumberList =[]
-    duplicateACKFlowSequenceTimeList = []
-    duplicateACKFlowCutoffTransmissions = 100
-
 
 
     for (flowToAnalyse) in sequenceNumberSendingTime.keys():
@@ -468,6 +460,87 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
         spuriousRetransmissionsFlowSequenceNumberList = sequenceNumberList
         spuriousRetransmissionsFlowSequenceTimeList = sequenceTimeList
 
+    duplicateACKFlow = ""
+    duplicateACKFlowValue = 0
+    duplicateACKFlowACKList = []
+    duplicateACKFlowACKTimeList = []
+    duplicateACKFlowSequenceNumberList =[]
+    duplicateACKFlowSequenceTimeList = []
+    duplicateACKFlowCutoffTransmissions = 1000
+
+    OutOfOrderFlow = ""
+    OutOfOrderFlowValue = 0
+    OutOfOrderFlowACKList = []
+    OutOfOrderFlowACKTimeList = []
+    OutOfOrderFlowSequenceNumberList =[]
+    OutOfOrderFlowSequenceTimeList = []
+    OutOfOrderFlowCutoffTransmissions = 1000
+
+    for (flowToAnalyse) in sequenceNumberACKedTime.keys():
+      flowToAnalyseParameters = flowToAnalyse.split(" ")
+      serverIP = flowToAnalyseParameters[0]
+      clientIP = flowToAnalyseParameters[1]
+      serverPort = flowToAnalyseParameters[2]
+      clientPort = flowToAnalyseParameters[3]
+
+      numberOfDuplicateACKs = 0
+      numberOfOutOfOrderDeliveries = 0
+
+      sequenceTimeList = []
+      sequenceNumberList = []
+      ACKTimeList = []
+      ACKList = []
+
+      if sequenceNumberSendingTime.get(flowToAnalyse) is None:
+        print("Wrong flow number")
+        return
+
+      sequenceNumberTimeTupleList = sequenceNumberSendingTime[flowToAnalyse]
+      ACKNumberTimeTupleList = sequenceNumberACKedTime[flowToAnalyse]
+
+      for (ACKNumber, time) in sequenceNumberACKedTime[flowToAnalyse]:
+        try:
+          ACKList.index(ACKNumber)
+          numberOfDuplicateACKs += 1
+        except ValueError:
+          pass
+        ACKList.append(ACKNumber)
+        ACKTimeList.append(time)
+
+      for (sequenceNumber, time) in sequenceNumberACKedTime[flowToAnalyse]:
+        sequenceNumberList.append(sequenceNumber)
+        sequenceTimeList.append(time)
+
+      for i in range(0, len(ACKNumberTimeTupleList)):
+        (ACKNumber, time) = ACKNumberTimeTupleList[i]
+
+        # if i < len(sequenceNumberTimeTupleList) and not ((sequenceNumberTimeTupleList[i])[0] ==  ACKNumber - 1):
+        #   numberOfOutOfOrderDeliveries += 1
+        j = 0
+        while j < len(sequenceNumberTimeTupleList) and (sequenceNumberTimeTupleList[j])[1] < time:
+          if sequenceNumberTimeTupleList[0] > ACKNumberTimeTupleList[0]:
+            numberOfOutOfOrderDeliveries += 1
+            break
+          j += 1
+
+      numTotalPackets = len(sequenceNumberList + ACKList) 
+      if numberOfDuplicateACKs > duplicateACKFlowValue and numTotalPackets < duplicateACKFlowCutoffTransmissions:
+        duplicateACKFlow = flowToAnalyse
+        duplicateACKFlowValue = numberOfDuplicateACKs
+        duplicateACKFlowACKList = ACKList
+        duplicateACKFlowACKTimeList = ACKTimeList
+        duplicateACKFlowSequenceNumberList = sequenceNumberList
+        duplicateACKFlowSequenceTimeList = sequenceTimeList
+
+      if numberOfOutOfOrderDeliveries > OutOfOrderFlowValue and numTotalPackets < OutOfOrderFlowCutoffTransmissions:
+        OutOfOrderFlow = flowToAnalyse
+        OutOfOrderFlowValue = numberOfOutOfOrderDeliveries
+        OutOfOrderFlowACKList = ACKList
+        OutOfOrderFlowACKTimeList = ACKTimeList
+        OutOfOrderFlowSequenceNumberList = sequenceNumberList
+        OutOfOrderFlowSequenceTimeList = sequenceTimeList
+
+
 
     # plt.scatter(mostDataIntensiveFlowSequenceTimeList, mostDataIntensiveFlowSequenceNumberList, color= "red",  
     #             marker= "o", s=10)
@@ -477,19 +550,33 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
     #             marker= "o", s=10)
     # plt.scatter(mostRetransmissionsFlowACKTimeList, mostRetransmissionsFlowACKList, color= "green",  
     #             marker= "x", s=1)
-    plt.scatter(spuriousRetransmissionsFlowSequenceTimeList, spuriousRetransmissionsFlowSequenceNumberList, color= "red",  
+    # plt.scatter(spuriousRetransmissionsFlowSequenceTimeList, spuriousRetransmissionsFlowSequenceNumberList, color= "red",  
+    #             marker= "o", s=10)
+    # plt.scatter(spuriousRetransmissionsFlowACKTimeList, spuriousRetransmissionsFlowACKList, color= "green",  
+    #             marker= "x", s=1)
+    # plt.scatter(duplicateACKFlowSequenceTimeList, duplicateACKFlowSequenceNumberList, color= "red",  
+    #             marker= "o", s=10)
+    # plt.scatter(duplicateACKFlowACKTimeList, duplicateACKFlowACKList, color= "green",  
+    #             marker= "x", s=1)
+    plt.scatter(OutOfOrderFlowSequenceTimeList, OutOfOrderFlowSequenceNumberList, color= "red",  
                 marker= "o", s=10)
-    plt.scatter(spuriousRetransmissionsFlowACKTimeList, spuriousRetransmissionsFlowACKList, color= "green",  
+    plt.scatter(OutOfOrderFlowACKTimeList, OutOfOrderFlowACKList, color= "green",  
                 marker= "x", s=1)
     # xmin = min(mostDataIntensiveFlowSequenceTimeList + mostDataIntensiveFlowACKTimeList)
     # ymin = min(mostDataIntensiveFlowSequenceNumberList + mostDataIntensiveFlowACKList) - 100
     # xmin = min(mostRetransmissionsFlowSequenceTimeList + mostRetransmissionsFlowACKTimeList)
     # ymin = min(mostRetransmissionsFlowSequenceNumberList + mostRetransmissionsFlowACKList) - 100
-    xmin = min(spuriousRetransmissionsFlowSequenceTimeList + spuriousRetransmissionsFlowACKTimeList)
-    ymin = min(spuriousRetransmissionsFlowSequenceNumberList + spuriousRetransmissionsFlowACKList) - 100
+    # xmin = min(spuriousRetransmissionsFlowSequenceTimeList + spuriousRetransmissionsFlowACKTimeList)
+    # ymin = min(spuriousRetransmissionsFlowSequenceNumberList + spuriousRetransmissionsFlowACKList) - 100
+    # xmin = min(duplicateACKFlowSequenceTimeList + duplicateACKFlowACKTimeList)
+    # ymin = min(duplicateACKFlowSequenceNumberList + duplicateACKFlowACKList) - 100
+    xmin = min(OutOfOrderFlowSequenceTimeList + OutOfOrderFlowACKTimeList)
+    ymin = min(OutOfOrderFlowSequenceNumberList + OutOfOrderFlowACKList) - 100
     print('Most data intensive flow: ' + mostDataIntensiveFlow)
     print('Most retransmitting flow: ' + mostRetransmissionsFlow)
     print('Most spurious retransmitting flow: ' + spuriousRetransmissionsFlow)
+    print('Duplicate ACK flow: ' + duplicateACKFlow)
+    print('Out of Order delivery: ' + OutOfOrderFlow)
     # x-axis label 
     plt.xlabel("Time") 
     # frequency label 
