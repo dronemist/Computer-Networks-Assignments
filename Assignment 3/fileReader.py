@@ -112,7 +112,7 @@ def fileReader(fileName, name, toAnalyseFlow):
   print('Number of client Ip\'s: ' + str(len(clientIPs)))      
   print('Number of distinct TCP flows: ' + str(len(TCPflows)))
 
-def plotScatterPlot(name, X, Y, xlabel, ylabel, xmax = 2000, ymax = 2000):
+def plotScatterPlot(name, X, Y, xlabel, ylabel, xmax = 2000, ymax = 2000, isBounded = True):
   plt.scatter(X, Y, color= "green",  
             marker= "o", s=10)
   xmin = 0
@@ -122,7 +122,8 @@ def plotScatterPlot(name, X, Y, xlabel, ylabel, xmax = 2000, ymax = 2000):
   # frequency label 
   plt.ylabel(ylabel)
   # zooming in on the graph
-  plt.axis([xmin, xmax, ymin, ymax]) 
+  if(isBounded):
+    plt.axis([xmin, xmax, ymin, ymax]) 
   # plot title 
   # plt.title() 
   plt.margins(0.1)
@@ -306,6 +307,13 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
   '''plot for 4'''  
   plotCDF(name, flowDurationPlotData, 'Duration of connection(in s)', 'cdf', 0, 1000)
 
+  # temp1 = []
+  # temp2 = []
+  # for (i,bytes) in enumerate(bytesReceivedPlotData):
+  #   if(bytes < 1000 and bytesSentPlotData[i] < 1000):
+  #     temp1.append(bytes)
+  #     temp2.append(bytesSentPlotData[i])
+      
   print("Correlation Coefficients")
   print(calculatePearsonCoefficient(flowDurationPlotData, bytesSentPlotData))
   print(calculatePearsonCoefficient(bytesSentPlotData, bytesReceivedPlotData))
