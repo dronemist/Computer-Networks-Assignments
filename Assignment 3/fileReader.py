@@ -298,7 +298,6 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
   flowDurationPlotData = []
   bytesSentPlotData = []
   bytesReceivedPlotData = []
-  print(median(incomingPacketLengthList))
   for (flow, flowDuration) in TCPFlowConnectionDuration.items():
     maxConnectionDuration = max(maxConnectionDuration, flowDuration)
     flowDurationPlotData.append(flowDuration)
