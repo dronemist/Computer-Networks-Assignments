@@ -203,7 +203,7 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
     currentArrivalTime = parsedPacket["Time"]
 
     # if packet is incoming to server
-    if {destinationIP}.issubset(serverIPs):
+    if {destinationIP}.issubset(serverIPs) and parsedPacket["Protocol"] == "TCP":
       currentServerPacketInterArrivalTime = currentArrivalTime - mostRecentServerPacketArrivalTime
       interArrivalIncomingPacketToServerTimeList.append(currentServerPacketInterArrivalTime)
       mostRecentServerPacketArrivalTime = currentArrivalTime
@@ -211,7 +211,7 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
       # Updating incoming packet length list
       incomingPacketLengthList.append(packetLength)
     # if packet is outgoing to client
-    if {destinationIP}.issubset(clientIPs):
+    if {destinationIP}.issubset(clientIPs) and parsedPacket["Protocol"] == "TCP":
       #Updating outgoing packet length list
       outgoingPacketLengthList.append(packetLength)
 
@@ -242,6 +242,7 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
         #Initialising sequence numbers
         sequenceNumberACKedTime[flow] = []
         sequenceNumberSendingTime[flow] = []
+        
 
       if "FIN" in subWords[3] or "RST" in subWords[3]:
         flowStartTime = TCPFlowsStartedInTime.get(flow)
@@ -268,7 +269,7 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
             if sequenceNumberACKedTime.get(flow) is not None:
               sequenceNumberACKedTime[flow].append( (int(ACKNumberString), float(timeOfCurrentPacketCapture)) )
             else:
-              sequenceNumberACKedTime[flow] = []
+              sequenceNumberACKedTime[flow] = [ (int(ACKNumberString), float(timeOfCurrentPacketCapture)) ]
 
 
       if reverseFlowStartTime is not None:
@@ -281,7 +282,7 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
             if sequenceNumberSendingTime.get(reverseFlow) is not None:
               sequenceNumberSendingTime[reverseFlow].append( (int(sequenceNumberString), float(timeOfCurrentPacketCapture)) )
             else:
-              sequenceNumberSendingTime[reverseFlow] = []
+              sequenceNumberSendingTime[reverseFlow] = [ (int(sequenceNumberString), float(timeOfCurrentPacketCapture)) ]
 
   # For plotting CDF of connection time and bytes sent      
   maxConnectionDuration = 0
