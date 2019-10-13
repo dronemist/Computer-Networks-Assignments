@@ -362,6 +362,8 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
     mostRetransmissionsFlowACKTimeList = []
     mostRetransmissionsFlowSequenceNumberList =[]
     mostRetransmissionsFlowSequenceTimeList = []
+    mostRetransmissionsFlowCutoffTransmissions = 100
+
 
     for (flowToAnalyse) in sequenceNumberSendingTime.keys():
       # flowToAnalyse = flow
@@ -370,6 +372,8 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
       clientIP = flowToAnalyseParameters[1]
       serverPort = flowToAnalyseParameters[2]
       clientPort = flowToAnalyseParameters[3]
+
+      numberOfRetransmissions = 0
 
       # flowToAnalyseFormatted = clientIP + " " + clientPort + " " + serverIP + " " + serverPort
 
@@ -383,6 +387,12 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
         return
 
       for (sequenceNumber, time) in sequenceNumberSendingTime[flowToAnalyse]:
+        try:
+          sequenceNumberList.index(sequenceNumber)
+          numberOfRetransmissions += 1
+          # print(numberOfRetransmissions)
+        except ValueError:
+          pass
         sequenceNumberList.append(sequenceNumber)
         sequenceTimeList.append(time)
 
@@ -390,22 +400,38 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
         ACKList.append(ACKNumber)
         ACKTimeList.append(time)
 
-      temp = len(sequenceNumberList + ACKList) 
-      if temp > mostDataIntensiveFlowValue:
+      numTotalPackets = len(sequenceNumberList + ACKList) 
+      if numTotalPackets > mostDataIntensiveFlowValue:
         mostDataIntensiveFlow = flowToAnalyse
-        mostDataIntensiveFlowValue = temp
+        mostDataIntensiveFlowValue = numTotalPackets
         mostDataIntensiveFlowACKList = ACKList
         mostDataIntensiveFlowACKTimeList = ACKTimeList
         mostDataIntensiveFlowSequenceNumberList = sequenceNumberList
         mostDataIntensiveFlowSequenceTimeList = sequenceTimeList
+      
+      if numberOfRetransmissions > mostRetransmissionsFlowValue and numTotalPackets < mostRetransmissionsFlowCutoffTransmissions:
+        mostRetransmissionsFlow = flowToAnalyse
+        mostRetransmissionsFlowValue = numberOfRetransmissions
+        mostRetransmissionsFlowACKList = ACKList
+        mostRetransmissionsFlowACKTimeList = ACKTimeList
+        mostRetransmissionsFlowSequenceNumberList = sequenceNumberList
+        mostRetransmissionsFlowSequenceTimeList = sequenceTimeList
 
-    plt.scatter(mostDataIntensiveFlowSequenceTimeList, mostDataIntensiveFlowSequenceNumberList, color= "red",  
+
+    # plt.scatter(mostDataIntensiveFlowSequenceTimeList, mostDataIntensiveFlowSequenceNumberList, color= "red",  
+    #             marker= "o", s=10)
+    # plt.scatter(mostDataIntensiveFlowACKTimeList, mostDataIntensiveFlowACKList, color= "green",  
+    #             marker= "x", s=1)
+    plt.scatter(mostRetransmissionsFlowSequenceTimeList, mostRetransmissionsFlowSequenceNumberList, color= "red",  
                 marker= "o", s=10)
-    plt.scatter(mostDataIntensiveFlowACKTimeList, mostDataIntensiveFlowACKList, color= "green",  
+    plt.scatter(mostRetransmissionsFlowACKTimeList, mostRetransmissionsFlowACKList, color= "green",  
                 marker= "x", s=1)
-    xmin = min(mostDataIntensiveFlowSequenceTimeList + mostDataIntensiveFlowACKTimeList)
-    ymin = min(mostDataIntensiveFlowSequenceNumberList + mostDataIntensiveFlowACKList) - 100
+    # xmin = min(mostDataIntensiveFlowSequenceTimeList + mostDataIntensiveFlowACKTimeList)
+    # ymin = min(mostDataIntensiveFlowSequenceNumberList + mostDataIntensiveFlowACKList) - 100
+    xmin = min(mostRetransmissionsFlowSequenceTimeList + mostRetransmissionsFlowACKTimeList)
+    ymin = min(mostRetransmissionsFlowSequenceNumberList + mostRetransmissionsFlowACKList) - 100
     print('Most data intensive flow: ' + mostDataIntensiveFlow)
+    print('Most retransmitting flow: ' + mostRetransmissionsFlow)
     # x-axis label 
     plt.xlabel("Time") 
     # frequency label 
@@ -419,7 +445,7 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
     # plt.savefig('Graphs/' + name + '/' + ylabel + '.png')
     # plt.close()
 
-    # function to show the plot 
+    # # function to show the plot 
     plt.show()           
 
   
