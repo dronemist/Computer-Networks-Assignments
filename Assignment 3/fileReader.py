@@ -378,7 +378,7 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
     spuriousRetransmissionsFlowACKTimeList = []
     spuriousRetransmissionsFlowSequenceNumberList =[]
     spuriousRetransmissionsFlowSequenceTimeList = []
-    spuriousRetransmissionsFlowCutoffTransmissions = 100
+    spuriousRetransmissionsFlowCutoffTransmissions = 10000
 
 
 
@@ -425,8 +425,9 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
         (sequenceNumber, time) = sequenceNumberTimeTupleList[i]
         j = 0
         while j < len(ACKNumberTimeTupleList) and (ACKNumberTimeTupleList[j])[1] < time:
-          if sequenceNumberTimeTupleList[0] < ACKNumberTimeTupleList[0]:
+          if sequenceNumberTimeTupleList[i] <= ACKNumberTimeTupleList[j]:
             numberOfSpuriousRetransmissions += 1
+            print("Hi")
             break
           j += 1
 
@@ -466,7 +467,7 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
     duplicateACKFlowACKTimeList = []
     duplicateACKFlowSequenceNumberList =[]
     duplicateACKFlowSequenceTimeList = []
-    duplicateACKFlowCutoffTransmissions = 1000
+    duplicateACKFlowCutoffTransmissions = 10000
 
     OutOfOrderFlow = ""
     OutOfOrderFlowValue = 0
@@ -474,7 +475,7 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
     OutOfOrderFlowACKTimeList = []
     OutOfOrderFlowSequenceNumberList =[]
     OutOfOrderFlowSequenceTimeList = []
-    OutOfOrderFlowCutoffTransmissions = 1000
+    OutOfOrderFlowCutoffTransmissions = 10000
 
     for (flowToAnalyse) in sequenceNumberACKedTime.keys():
       flowToAnalyseParameters = flowToAnalyse.split(" ")
@@ -513,18 +514,20 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
 
       for i in range(0, len(ACKNumberTimeTupleList)):
         (ACKNumber, time) = ACKNumberTimeTupleList[i]
-
-        # if i < len(sequenceNumberTimeTupleList) and not ((sequenceNumberTimeTupleList[i])[0] ==  ACKNumber - 1):
+        # if i < len(sequenceNumberTimeTupleList) and not ((sequenceNumberTimeTupleList[i])[0] <=  ACKNumber):
         #   numberOfOutOfOrderDeliveries += 1
+          # print((sequenceNumberTimeTupleList[i])[0])
+          # print(ACKNumber)
         j = 0
-        while j < len(sequenceNumberTimeTupleList) and (sequenceNumberTimeTupleList[j])[1] < time:
-          if sequenceNumberTimeTupleList[0] > ACKNumberTimeTupleList[0]:
-            numberOfOutOfOrderDeliveries += 1
-            break
+        while j < len(sequenceNumberTimeTupleList):
+          if (sequenceNumberTimeTupleList[j])[1] < time:
+            if (sequenceNumberTimeTupleList[j])[0] > ACKNumber:
+              numberOfOutOfOrderDeliveries += 1
+          
           j += 1
 
       numTotalPackets = len(sequenceNumberList + ACKList) 
-      if numberOfDuplicateACKs > duplicateACKFlowValue and numTotalPackets < duplicateACKFlowCutoffTransmissions:
+      if numberOfDuplicateACKs > duplicateACKFlowValue:
         duplicateACKFlow = flowToAnalyse
         duplicateACKFlowValue = numberOfDuplicateACKs
         duplicateACKFlowACKList = ACKList
@@ -533,6 +536,7 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
         duplicateACKFlowSequenceTimeList = sequenceTimeList
 
       if numberOfOutOfOrderDeliveries > OutOfOrderFlowValue and numTotalPackets < OutOfOrderFlowCutoffTransmissions:
+        print(numberOfOutOfOrderDeliveries)
         OutOfOrderFlow = flowToAnalyse
         OutOfOrderFlowValue = numberOfOutOfOrderDeliveries
         OutOfOrderFlowACKList = ACKList
@@ -553,7 +557,7 @@ def plotConnectionDurationCDF(name, toAnalyseFlow):
     # plt.scatter(spuriousRetransmissionsFlowSequenceTimeList, spuriousRetransmissionsFlowSequenceNumberList, color= "red",  
     #             marker= "o", s=10)
     # plt.scatter(spuriousRetransmissionsFlowACKTimeList, spuriousRetransmissionsFlowACKList, color= "green",  
-    #             marker= "x", s=1)
+    #             marker= "x", s=10)
     # plt.scatter(duplicateACKFlowSequenceTimeList, duplicateACKFlowSequenceNumberList, color= "red",  
     #             marker= "o", s=10)
     # plt.scatter(duplicateACKFlowACKTimeList, duplicateACKFlowACKList, color= "green",  
